@@ -1,8 +1,17 @@
 // chess-website-uml/public/src/ui/MoveFlash.js
-// BORDER-ONLY glow via CSS box-shadow on `.board-wrap`, **opponent-only** with
-// delayed book-move pulse when engine replies instantly after your click.
+// BORDER-ONLY glow via CSS box-shadow on `.board-wrap`.
+// Pulses **only on opponent moves**, including instant **book** replies, and
+// suppresses pulses on **page load** or **New Game** resets.
 //
-// Public API: window.MoveFlash.{attachTo, flash, setColor, test}; window.moveflash alias.
+// Core rules
+// • Tail starts on release only: pointerup / dragend / drop (not on pointerdown).
+// • Mutations during active drag are ignored.
+// • We diff actual square occupancy (.sq[data-square]) to detect real moves.
+// • We count "additions since tail start": if >=2 inside tail → your move + instant book reply → pulse at tail end.
+// • If exactly 1 addition inside tail → arm awaitingOpponent → pulse on next addition after tail.
+// • Large-batch changes (>6 squares changed) are treated as resets and never pulse.
+//
+// API: window.MoveFlash.{attachTo, flash({duration,color}), setColor(color), test()}; alias window.moveflash.
 //
 (function(){
   'use strict';
@@ -11,7 +20,8 @@
     duration: 1500,
     color: 'rgb(160,210,255)',
     peak: 0.55,
-    pointerTailMs: 420   // classify board changes within this window after a pointer as user-driven
+    tailMs: 420,          // length of pointer tail window
+    bulkThreshold: 6      // >= changed squares → treat as reset (no pulse)
   };
 
   // ---------- styles ----------
@@ -47,37 +57,39 @@
     return boardEl.closest('.board-wrap') || boardEl.parentElement || boardEl;
   }
 
-  // Determine occupant color of a square element
+  // ---------- occupancy snapshot & diff ----------
   function colorOfSquare(el){
-    // 1) data-piece like "wP" / "bq"
+    // prefer data-piece like "wP"/"bq"
     const dp = el.getAttribute('data-piece');
     if (dp && /^[wb]/i.test(dp)) return dp[0].toLowerCase();
 
-    // 2) class tokens like "pw" / "pb" or "white"/"black"
+    // common class patterns
     for (const cls of el.classList){
       if (cls === 'pw' || cls === 'white' || cls === 'w') return 'w';
       if (cls === 'pb' || cls === 'black' || cls === 'b') return 'b';
     }
 
-    // 3) child piece elements
+    // nested piece nodes
     const pieceChild = el.querySelector('.piece.white, .white, .pw, .piece.black, .black, .pb');
     if (pieceChild){
       if (pieceChild.classList.contains('white') || pieceChild.classList.contains('pw')) return 'w';
       if (pieceChild.classList.contains('black') || pieceChild.classList.contains('pb')) return 'b';
     }
 
-    // 4) text content heuristic: uppercase = white, lowercase = black (common FEN letter render)
+    // text glyphs/letters fallback
     const txt = el.textContent || '';
-    const m = txt.match(/[prnbqkPRNBQK]/);
+    const m = txt.match(/[prnbqkPRNBQK♙♘♗♖♕♔♟♞♝♜♛♚]/);
     if (m){
-      return (m[0] === m[0].toUpperCase()) ? 'w' : 'b';
+      const ch = m[0];
+      // Assume uppercase/glyph = white, lowercase = black
+      if (/[PRNBQK♙♘♗♖♕♔]/.test(ch)) return 'w';
+      if (/[prnbqk♟♞♝♜♛♚]/.test(ch)) return 'b';
     }
 
     return null;
   }
 
-  // Snapshot of board: { 'e4': 'w'|'b'|null }
-  function readSnapshot(boardEl){
+  function takeSnapshot(boardEl){
     const map = Object.create(null);
     const nodes = boardEl.querySelectorAll('.sq[data-square]');
     nodes.forEach(el => {
@@ -87,27 +99,17 @@
     return map;
   }
 
-  // Color that appeared on any square (destination color)
-  function detectMovedColor(prev, next){
-    let addW = 0, addB = 0;
+  function diffCounts(prev, next){
+    let changed = 0, additions = 0;
     for (const sq in next){
       const a = prev[sq] || null;
       const b = next[sq] || null;
-      if (a !== b && b){
-        if (b === 'w') addW++; else addB++;
+      if (a !== b){
+        changed++;
+        if (b) additions++;
       }
     }
-    if (addW === 0 && addB === 0){
-      // only removals: infer opposite color moved
-      let decW = 0, decB = 0;
-      for (const sq in next){
-        const a = prev[sq] || null, b = next[sq] || null;
-        if (a && !b){ if (a === 'w') decW++; else decB++; }
-      }
-      if (decW !== decB) return decW > decB ? 'w' : 'b';
-      return null;
-    }
-    return addW >= addB ? (addW ? 'w' : null) : 'b';
+    return { changed, additions };
   }
 
   // ---------- core ----------
@@ -118,12 +120,15 @@
     _state: {
       color: CONFIG.color,
       duration: CONFIG.duration,
-      isPointerDown: false,
-      lastPointerTs: 0,
-      humanColor: null,
-      snapshot: null,
+
+      // drag / tail FSM
+      inDrag: false,
+      tailActive: false,
+      tailTimer: 0,
+      tailStartSnap: null,   // snapshot at start of tail
+      lastSnap: null,        // last processed snapshot (for general diffs)
       rafId: 0,
-      delayedTimer: 0
+      awaitingOpponent: false
     },
 
     attachTo(boardEl){
@@ -132,48 +137,89 @@
         const host = findHost(boardEl);
         host.classList.add('mf-host');
 
-        const markDown = () => { this._state.isPointerDown = true;  this._state.lastPointerTs = performance.now(); };
-        const markUp   = () => { this._state.isPointerDown = false; this._state.lastPointerTs = performance.now(); };
-        ['pointerdown','mousedown','touchstart','dragstart'].forEach(ev =>
-          boardEl.addEventListener(ev, markDown, { passive: true, capture: true }));
-        ['pointerup','mouseup','touchend','touchcancel','dragend','drop'].forEach(ev =>
-          boardEl.addEventListener(ev, markUp,   { passive: true, capture: true }));
+        // initial snapshot (prevents boot pulse)
+        this._state.lastSnap = takeSnapshot(boardEl);
 
-        this._state.snapshot = readSnapshot(boardEl);
+        const startTail = ()=>{
+          clearTimeout(this._state.tailTimer);
+          this._state.tailActive = true;
+          this._state.tailStartSnap = takeSnapshot(boardEl); // baseline for counting additions inside tail
 
+          this._state.tailTimer = setTimeout(()=>{
+            // End of tail window
+            this._state.tailActive = false;
+
+            // Compare current board vs tail start to count total additions inside tail
+            const nowSnap = takeSnapshot(boardEl);
+            const { changed, additions } = diffCounts(this._state.tailStartSnap, nowSnap);
+
+            if (changed >= CONFIG.bulkThreshold){
+              // Reset/init event inside tail → do nothing
+              this._state.awaitingOpponent = false;
+            } else if (additions >= 2){
+              // Your move + instant book reply happened within tail → flash once now
+              this.flash();
+              this._state.awaitingOpponent = false;
+            } else if (additions === 1){
+              // Only your move inside tail → wait for opponent outside tail
+              this._state.awaitingOpponent = true;
+            } else {
+              this._state.awaitingOpponent = false;
+            }
+
+            // Update baseline
+            this._state.lastSnap = nowSnap;
+            this._state.tailStartSnap = null;
+          }, CONFIG.tailMs);
+        };
+
+        // drag boundaries
+        const onDragStart = ()=>{ this._state.inDrag = true; };
+        const onDragEnd   = ()=>{ this._state.inDrag = false; startTail(); };
+
+        // click-to-move: start tail on release
+        const onUp = startTail;
+
+        boardEl.addEventListener('dragstart', onDragStart, { capture: true });
+        boardEl.addEventListener('dragend',   onDragEnd,   { capture: true });
+        boardEl.addEventListener('drop',      onDragEnd,   { capture: true });
+        ['pointerup','mouseup','touchend','touchcancel'].forEach(ev =>
+          boardEl.addEventListener(ev, onUp, { passive: true, capture: true }));
+
+        // observe occupancy changes
         const obs = new MutationObserver(()=>{
           if (this._state.rafId) return;
           this._state.rafId = requestAnimationFrame(()=>{
             this._state.rafId = 0;
-            const prev = this._state.snapshot;
-            const next = readSnapshot(boardEl);
 
-            let changed = false;
-            for (const k in next){ if (next[k] !== prev[k]) { changed = true; break; } }
-            if (!changed){ this._state.snapshot = next; return; }
+            if (this._state.inDrag) return; // ignore drag churn
 
-            const moved = detectMovedColor(prev, next); // 'w'|'b'|null
-            this._state.snapshot = next;
-            if (!moved) return;
+            const prev = this._state.lastSnap || takeSnapshot(boardEl);
+            const next = takeSnapshot(boardEl);
+            const { changed, additions } = diffCounts(prev, next);
 
-            const sincePtr = performance.now() - this._state.lastPointerTs;
+            // Update baseline immediately
+            this._state.lastSnap = next;
 
-            // Inside pointer-tail window -> likely user's action
-            if (sincePtr <= CONFIG.pointerTailMs){
-              if (!this._state.humanColor) this._state.humanColor = moved;
+            if (changed === 0) return;
 
-              // But if the color that changed is NOT the human color (engine reply inside tail),
-              // schedule a delayed pulse to fire after the tail window expires.
-              if (this._state.humanColor && moved !== this._state.humanColor){
-                const delay = Math.max(0, CONFIG.pointerTailMs - sincePtr + 20);
-                clearTimeout(this._state.delayedTimer);
-                this._state.delayedTimer = setTimeout(()=> this.flash(), delay);
-              }
+            // Suppress resets / New Game / initial layout
+            if (changed >= CONFIG.bulkThreshold){
+              this._state.awaitingOpponent = false;
               return;
             }
 
-            // Outside tail: opponent move if color != human
-            if (!this._state.humanColor || moved !== this._state.humanColor){
+            if (this._state.tailActive){
+              // Inside tail: do nothing now; we'll decide at tail end using tailStartSnap
+              return;
+            }
+
+            // Outside tail: opponent moved (either normal think or book just after tail)
+            if (this._state.awaitingOpponent){
+              this.flash();
+              this._state.awaitingOpponent = false;
+            } else {
+              // No tail and not awaiting -> engine-only changes (e.g., auto-play) → pulse
               this.flash();
             }
           });
@@ -183,7 +229,7 @@
           childList:true,
           characterData:true,
           attributes:true,
-          attributeFilter:['class','data-piece'] // watching class & data-piece changes
+          attributeFilter:['class','data-piece','style']
         });
 
         this.host = host;
@@ -209,9 +255,7 @@
       host.classList.add('mf-pulse');
     },
 
-    setColor(color){
-      this._state.color = color || CONFIG.color;
-    },
+    setColor(color){ this._state.color = color || CONFIG.color; },
 
     test(){ this.setColor('rgb(190,230,255)'); this.flash({ duration: 1500 }); }
   };
