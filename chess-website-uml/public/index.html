@@ -41,7 +41,7 @@
     }
 
     /* Board */
-    #board{ position:relative; 
+    #board{ position:relative;
       width:100%; aspect-ratio:1/1; display:grid;
       grid-template-columns:repeat(8, 1fr);
       grid-template-rows:repeat(8, 1fr);
@@ -130,7 +130,7 @@
       font-size:13px; line-height:1.35;
       white-space:normal; word-wrap:break-word;
     }
-  
+
     /* Arrow rendering polish */
     svg .user-arrows line,
     svg .sys-arrows line { stroke-linecap: round; }
@@ -304,5 +304,6 @@
   <!-- App entry + engine boot (leave these as-is for your current project) -->
   <script type="module" src="./src/app/App.js"></script>
   <script type="module" src="./src/engine/boot.js"></script>
+  <script src="./src/ui/DrawOverlay.js" defer></script>
 </body>
 </html>
