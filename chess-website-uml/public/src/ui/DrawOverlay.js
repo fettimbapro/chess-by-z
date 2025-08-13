@@ -1,9 +1,15 @@
 
 // public/src/ui/DrawOverlay.js
-// Standalone drawing overlay for your chess board.
-// Adds right-click arrows & circles with color modifiers (Shift=red, Alt=yellow, Ctrl/⌘=blue, none=green).
-// Self-initializes on DOMContentLoaded and attaches to #board without modifying your BoardUI.
-// No exports required; attaches instance to window.DrawOverlayInstance for debugging.
+// Right-click drawing overlay (v3)
+//
+// NEW in v3:
+// - Left click anywhere on the board clears all drawings (and clears system arrows group too).
+// - After user action (left pointer up), drawings are automatically cleared (recorded to a local snapshot stack).
+// - Arrow keys restore snapshots best-effort: ← restores previous snapshot, → clears to forward state.
+// - Bigger arrowheads; shaft ends before the head so the tip is never "inside" the line.
+// - Robust pointer vs mouse handling; reliable preview teardown.
+//
+// Colors: none=green, Shift=red, Alt=yellow, Ctrl/⌘=blue.
 
 (function(){
   'use strict';
@@ -15,7 +21,7 @@
     return 'g';
   }
   function colorToCss(key){
-    switch (key) {
+    switch (key){
       case 'r': return '#ff5d5d';
       case 'y': return '#ffd166';
       case 'b': return '#69a7ff';
@@ -23,9 +29,9 @@
     }
   }
 
-  function squareAt(boardEl, x, y, cell, orientation){
+  const FILES = ['a','b','c','d','e','f','g','h'];
+  function squareAt(cell, orientation, x, y){
     if (!cell) return null;
-    const FILES = ['a','b','c','d','e','f','g','h'];
     const orientWhite = (orientation === 'white');
     const file = Math.max(0, Math.min(7, Math.floor(x / cell)));
     const rank = Math.max(0, Math.min(7, Math.floor(y / cell)));
@@ -33,14 +39,13 @@
     const yr = orientWhite ? 7 - rank : rank;
     return `${FILES[xf]}${yr+1}`;
   }
-
   function squareCenter(square, cell, orientation){
-    const file = square.charCodeAt(0) - 97;
-    const rank = parseInt(square[1],10) - 1;
+    const f = square.charCodeAt(0) - 97;
+    const r = parseInt(square[1],10) - 1;
     const orientWhite = (orientation === 'white');
-    const x = orientWhite ? file : (7 - file);
-    const y = orientWhite ? (7 - rank) : rank;
-    return {x:(x + 0.5) * cell, y:(y + 0.5) * cell};
+    const x = orientWhite ? f : (7 - f);
+    const y = orientWhite ? (7 - r) : r;
+    return { x: (x + 0.5)*cell, y: (y + 0.5)*cell };
   }
 
   function ensureOverlay(boardEl){
@@ -54,8 +59,7 @@
       svg.style.pointerEvents = 'none';
       boardEl.appendChild(svg);
     }
-    // layers
-    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.innerHTML = '';
     const gUser = document.createElementNS('http://www.w3.org/2000/svg','g'); gUser.setAttribute('class','user-arrows');
     const gSys = document.createElementNS('http://www.w3.org/2000/svg','g'); gSys.setAttribute('class','sys-arrows');
     const gPreview = document.createElementNS('http://www.w3.org/2000/svg','g'); gPreview.setAttribute('class','preview-arrow');
@@ -70,20 +74,25 @@
     const ux = (b.x - a.x), uy = (b.y - a.y);
     const len = Math.hypot(ux,uy) || 1;
     const nx = ux/len, ny = uy/len;
-    const head = Math.min(18, Math.max(12, cell*0.22));
-    const w = Math.min(9, Math.max(6, cell*0.11));
+    const headLen = Math.max(cell*0.28, 18);
+    const headW   = Math.max(sw*1.0, cell*0.18);
+    const sx2 = b.x - nx*headLen;
+    const sy2 = b.y - ny*headLen;
 
     const line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+    line.setAttribute('x2', sx2); line.setAttribute('y2', sy2);
     line.setAttribute('stroke', color);
     line.setAttribute('stroke-width', sw);
     line.setAttribute('stroke-linecap', 'round');
 
+    const npx = -ny, npy = nx;
     const tri = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-    const hx = b.x - nx*head, hy = b.y - ny*head, npx=-ny, npy=nx;
-    tri.setAttribute('points', `${b.x},${b.y} ${hx+npx*w},${hy+npy*w} ${hx-npx*w},${hy-npy*w}`);
+    tri.setAttribute('points', `${b.x},${b.y} ${sx2+npx*headW},${sy2+npy*headW} ${sx2-npx*headW},${sy2-npy*headW}`);
     tri.setAttribute('fill', color);
+    tri.setAttribute('stroke', color);
+    tri.setAttribute('stroke-linejoin', 'round');
+    tri.setAttribute('stroke-width', Math.max(1, sw*0.25));
 
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
     if (dataKey) g.setAttribute('data-uci', dataKey);
@@ -105,48 +114,57 @@
     layer.appendChild(ring);
   }
 
-  function getOrientation(boardEl){
-    // Try common places to find orientation, fallback to white
-    const attr = boardEl.getAttribute('data-orientation') || boardEl.dataset?.orientation;
-    if (attr === 'black' || attr === 'white') return attr;
-    // Try body/class hint
-    if (document.body.classList.contains('black')) return 'black';
-    return 'white';
-  }
-
   function DrawOverlay(boardEl){
     this.boardEl = boardEl;
-    // Ensure board has positioning for overlay
     const cs = getComputedStyle(boardEl);
     if (cs.position === 'static') boardEl.style.position = 'relative';
 
-    const layers = ensureOverlay(boardEl);
-    this.svg = layers.svg;
-    this.gUser = layers.gUser;
-    this.gSys = layers.gSys;
-    this.gPreview = layers.gPreview;
-    this.gMarks = layers.gMarks;
+    const { svg, gUser, gSys, gPreview, gMarks } = ensureOverlay(boardEl);
+    this.svg = svg; this.gUser = gUser; this.gSys = gSys; this.gPreview = gPreview; this.gMarks = gMarks;
 
-    this.userArrows = new Set();   // `${uci}:${colorKey}`
-    this.userCircles = new Set();  // `${sq}:${colorKey}`
+    this.userArrows = new Set();
+    this.userCircles = new Set();
     this.drawStart = null;
     this.cell = 0;
-    this.orientation = getOrientation(boardEl);
+    this.orientation = (boardEl.getAttribute('data-orientation') || boardEl.dataset?.orientation) === 'black' ? 'black' : 'white';
+
+    // simple snapshot stack (for ArrowLeft/ArrowRight)
+    this._snapshots = []; // array of {arrows:[...], circles:[...]}
+    this._cursor = 0;     // points *after* the current state (like history)
 
     this.updateMetrics();
     this.resizeOverlay();
+    this.attachRightDraw();
+    this.attachLeftClear(); // clear on left click / pointer-up
 
-    // listeners
-    this.attachRightDrag();
-    this.boardEl.addEventListener('contextmenu', (e)=> e.preventDefault(), true);
+    boardEl.addEventListener('contextmenu', (e)=> e.preventDefault(), true);
     window.addEventListener('resize', ()=>{ this.updateMetrics(); this.resizeOverlay(); this.redrawAll(); });
+
+    // keyboard: restore snapshots on arrow keys
+    window.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowLeft'){
+        if (this._cursor > 0){
+          this._cursor--;
+          const snap = this._snapshots[this._cursor];
+          this.setUserDrawings(snap);
+        }
+      } else if (e.key === 'ArrowRight'){
+        if (this._cursor < this._snapshots.length){
+          this._cursor++;
+          // Forward typically means "no helpers"; clear to that snapshot if it exists, else empty.
+          const snap = this._snapshots[this._cursor] || {arrows:[],circles:[]};
+          this.setUserDrawings(snap);
+        }
+      }
+    });
   }
 
   DrawOverlay.prototype.updateMetrics = function(){
     const r = this.boardEl.getBoundingClientRect();
     const size = Math.min(r.width || 0, r.height || 0);
     this.cell = (size || 0) / 8 || 0;
-    this.orientation = getOrientation(this.boardEl);
+    const attr = this.boardEl.getAttribute('data-orientation') || this.boardEl.dataset?.orientation;
+    if (attr === 'black' || attr === 'white') this.orientation = attr;
   };
 
   DrawOverlay.prototype.resizeOverlay = function(){
@@ -158,26 +176,17 @@
   };
 
   DrawOverlay.prototype.redrawAll = function(){
-    this.redrawArrows();
-    this.redrawCircles();
-  };
-
-  DrawOverlay.prototype.redrawArrows = function(){
     this.gUser.innerHTML = '';
-    const sw = Math.max(8, Math.floor(this.cell*0.14));
-    for (const key of this.userArrows){
-      const [uci, colorKey='g'] = key.split(':');
-      const from = uci.slice(0,2), to = uci.slice(2,4);
-      drawArrowOnLayer(this.gUser, from, to, colorToCss(colorKey), sw, this.cell, this.orientation, key);
-    }
-  };
-
-  DrawOverlay.prototype.redrawCircles = function(){
     this.gMarks.innerHTML = '';
     const sw = Math.max(8, Math.floor(this.cell*0.14));
+    for (const key of this.userArrows){
+      const [uci, c='g'] = key.split(':');
+      const from = uci.slice(0,2), to = uci.slice(2,4);
+      drawArrowOnLayer(this.gUser, from, to, colorToCss(c), sw, this.cell, this.orientation, key);
+    }
     for (const key of this.userCircles){
-      const [sq, colorKey='g'] = key.split(':');
-      drawCircleOnLayer(this.gMarks, sq, colorToCss(colorKey), sw, this.cell, this.orientation, key);
+      const [sq, c='g'] = key.split(':');
+      drawCircleOnLayer(this.gMarks, sq, colorToCss(c), sw, this.cell, this.orientation, key);
     }
   };
 
@@ -185,54 +194,100 @@
     this.gPreview.innerHTML = '';
     if (!fromSq || !toSq) return;
     const sw = Math.max(7, Math.floor(this.cell*0.12));
-    const col = colorToCss(colorKey);
-    // 50% alpha
-    const alphaCol = col + '80';
-    drawArrowOnLayer(this.gPreview, fromSq, toSq, alphaCol, sw, this.cell, this.orientation);
+    const color = colorToCss(colorKey) + '90'; // ~56% alpha
+    drawArrowOnLayer(this.gPreview, fromSq, toSq, color, sw, this.cell, this.orientation);
   };
 
-  DrawOverlay.prototype.attachRightDrag = function(){
+  DrawOverlay.prototype.attachRightDraw = function(){
+    const hasPointer = !!window.PointerEvent;
     const onDown = (e) => {
       const isRight = (e.button === 2) || (e.buttons & 2) || (!!e.ctrlKey && e.button === 0);
       if (!isRight) return;
       const rect = this.boardEl.getBoundingClientRect();
       const x = e.clientX - rect.left, y = e.clientY - rect.top;
-      const fromSq = squareAt(this.boardEl, x, y, this.cell, this.orientation);
+      const fromSq = squareAt(this.cell, this.orientation, x, y);
       if (!fromSq) return;
 
       e.preventDefault();
       const modKey = colorFromMods(e);
-      this.drawStart = { fromSq, x0: e.clientX, y0: e.clientY, modKey };
+      this.drawStart = { fromSq, x0: e.clientX, y0: e.clientY, modKey, pointerId: hasPointer ? e.pointerId : -1 };
       this.renderPreview(fromSq, fromSq, modKey);
 
-      const move = (ev) => {
-        if (!this.drawStart) return;
-        const rx = ev.clientX - rect.left, ry = ev.clientY - rect.top;
-        const toSq = squareAt(this.boardEl, rx, ry, this.cell, this.orientation) || this.drawStart.fromSq;
-        this.renderPreview(this.drawStart.fromSq, toSq, this.drawStart.modKey);
-      };
-      const up = (ev) => {
-        document.removeEventListener('mousemove', move);
-        document.removeEventListener('mouseup', up);
-        this.finishRightDrag(ev);
-      };
-      document.addEventListener('mousemove', move);
-      document.addEventListener('mouseup', up);
+      const blockCtx = (ev)=> ev.preventDefault();
+      document.addEventListener('contextmenu', blockCtx, { capture:true, once:true });
 
-      // Temporarily block contextmenu until mouseup (Safari/Chrome safe)
-      const block = (ev) => ev.preventDefault();
-      document.addEventListener('contextmenu', block, {capture:true, once:true});
+      if (hasPointer){
+        const move = (ev) => {
+          if (!this.drawStart || (ev.pointerId !== this.drawStart.pointerId)) return;
+          const rx = ev.clientX - rect.left, ry = ev.clientY - rect.top;
+          const toSq = squareAt(this.cell, this.orientation, rx, ry) || this.drawStart.fromSq;
+          this.renderPreview(this.drawStart.fromSq, toSq, this.drawStart.modKey);
+        };
+        const up = (ev) => {
+          if (!this.drawStart || (ev.pointerId !== this.drawStart.pointerId)) return;
+          document.removeEventListener('pointermove', move, true);
+          document.removeEventListener('pointerup', up, true);
+          this.finishRightDrag(ev);
+        };
+        document.addEventListener('pointermove', move, true);
+        document.addEventListener('pointerup', up, true);
+      } else {
+        const move = (ev) => {
+          if (!this.drawStart) return;
+          const rx = ev.clientX - rect.left, ry = ev.clientY - rect.top;
+          const toSq = squareAt(this.cell, this.orientation, rx, ry) || this.drawStart.fromSq;
+          this.renderPreview(this.drawStart.fromSq, toSq, this.drawStart.modKey);
+        };
+        const up = (ev) => {
+          document.removeEventListener('mousemove', move, true);
+          document.removeEventListener('mouseup', up, true);
+          this.finishRightDrag(ev);
+        };
+        document.addEventListener('mousemove', move, true);
+        document.addEventListener('mouseup', up, true);
+      }
     };
 
-    if (window.PointerEvent){
-      this.boardEl.addEventListener('pointerdown', (e)=>{
-        const rightish = (e.button===2) || (e.buttons & 2) || (!!e.ctrlKey && e.button===0);
-        if (!rightish) return;
-        e.preventDefault();
-        onDown(e);
-      });
+    if (hasPointer){
+      this.boardEl.addEventListener('pointerdown', onDown);
     } else {
       this.boardEl.addEventListener('mousedown', onDown);
+    }
+  };
+
+  // Clear on left click / pointer-up:
+  DrawOverlay.prototype.attachLeftClear = function(){
+    const hasPointer = !!window.PointerEvent;
+    const onClear = (e) => {
+      const left = (e.button === 0) || (hasPointer && e.pointerType && e.button === 0);
+      if (!left) return;
+      // Record snapshot then clear
+      this.recordSnapshot();
+      this.clearAll();
+    };
+    if (hasPointer){
+      this.boardEl.addEventListener('pointerup', onClear);
+    } else {
+      this.boardEl.addEventListener('mouseup', onClear);
+    }
+    // Also treat a simple click as clear (as requested)
+    this.boardEl.addEventListener('click', (e)=>{
+      if (e.button !== 0) return;
+      this.recordSnapshot();
+      this.clearAll();
+    });
+  };
+
+  DrawOverlay.prototype.recordSnapshot = function(){
+    const snap = this.getUserDrawings();
+    // Avoid pushing duplicates if same as last
+    const last = this._snapshots[this._cursor-1];
+    const asJson = JSON.stringify(snap);
+    const lastJson = last ? JSON.stringify(last) : '';
+    if (asJson !== lastJson){
+      this._snapshots.splice(this._cursor); // drop anything ahead
+      this._snapshots.push(snap);
+      this._cursor = this._snapshots.length;
     }
   };
 
@@ -242,15 +297,15 @@
     if (!start) return;
 
     const rect = this.boardEl.getBoundingClientRect();
-    const toSq = squareAt(this.boardEl, e.clientX - rect.left, e.clientY - rect.top, this.cell, this.orientation) || start.fromSq;
+    const toSq = squareAt(this.cell, this.orientation, e.clientX - rect.left, e.clientY - rect.top) || start.fromSq;
     const dx = e.clientX - start.x0, dy = e.clientY - start.y0;
-    const movedEnough = (dx*dx + dy*dy) > 16; // ~4px
+    const movedEnough = (dx*dx + dy*dy) > 16;
+
     const colorKey = start.modKey || 'g';
     const color = colorToCss(colorKey);
     const sw = Math.max(8, Math.floor(this.cell*0.14));
 
     if (!movedEnough || toSq === start.fromSq){
-      // toggle circle
       const ckey = `${start.fromSq}:${colorKey}`;
       if (this.userCircles.has(ckey)){
         this.userCircles.delete(ckey);
@@ -262,7 +317,6 @@
       return;
     }
 
-    // toggle arrow
     const uci = start.fromSq + toSq;
     const akey = `${uci}:${colorKey}`;
     if (this.userArrows.has(akey)){
@@ -274,39 +328,39 @@
     }
   };
 
-  // Export/Import API on instance
-  DrawOverlay.prototype.getUserDrawings = function(){
-    return {
-      arrows: Array.from(this.userArrows).map(k => { const [uci,color='g']=k.split(':'); return {uci, color}; }),
-      circles: Array.from(this.userCircles).map(k => { const [sq,color='g']=k.split(':'); return {sq, color}; })
-    };
-  };
-  DrawOverlay.prototype.setUserDrawings = function(obj){
-    this.userArrows.clear(); this.userCircles.clear();
-    if (obj && Array.isArray(obj.arrows)){
-      for (const a of obj.arrows){ const key = `${a.uci}:${a.color||'g'}`; this.userArrows.add(key); }
-    }
-    if (obj && Array.isArray(obj.circles)){
-      for (const c of obj.circles){ const key = `${c.sq}:${c.color||'g'}`; this.userCircles.add(key); }
-    }
-    this.redrawAll();
-  };
   DrawOverlay.prototype.clearAll = function(){
     this.userArrows.clear();
     this.userCircles.clear();
     this.gUser.innerHTML = '';
     this.gMarks.innerHTML = '';
     this.gPreview.innerHTML = '';
+    // also clear system arrows if present (engine lines)
+    try { this.svg.querySelector('.sys-arrows').innerHTML = ''; } catch {}
   };
 
-  // Auto-init on DOMContentLoaded
+  DrawOverlay.prototype.getUserDrawings = function(){
+    return {
+      arrows: Array.from(this.userArrows).map(k => { const [uci,color='g']=k.split(':'); return {uci,color}; }),
+      circles: Array.from(this.userCircles).map(k => { const [sq,color='g']=k.split(':'); return {sq,color}; })
+    };
+  };
+  DrawOverlay.prototype.setUserDrawings = function(obj){
+    this.userArrows.clear(); this.userCircles.clear();
+    if (obj && Array.isArray(obj.arrows)){
+      for (const a of obj.arrows){ this.userArrows.add(`${a.uci}:${a.color||'g'}`); }
+    }
+    if (obj && Array.isArray(obj.circles)){
+      for (const c of obj.circles){ this.userCircles.add(`${c.sq}:${c.color||'g'}`); }
+    }
+    this.redrawAll();
+  };
+
   document.addEventListener('DOMContentLoaded', function(){
     const boardEl = document.getElementById('board') || document.querySelector('.board, #chessboard, .board-container');
     if (!boardEl) return;
-    // Avoid double init
     if (boardEl.__drawOverlay) return;
     boardEl.__drawOverlay = true;
-    const instance = new DrawOverlay(boardEl);
-    window.DrawOverlayInstance = instance;
+    const inst = new DrawOverlay(boardEl);
+    window.DrawOverlayInstance = inst;
   });
 })();

@@ -8,7 +8,7 @@ const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBPPPP/RNBQKBNR'.replace(
 
 // Simple unicode glyphs; your CSS can override with images if preferred.
 const GLYPH = {
-  w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
+  w: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
   b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
 };
 
