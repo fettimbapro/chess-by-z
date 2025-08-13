@@ -1,0 +1,42 @@
+:root{
+  --bg:#0f1216; --layer:#141922; --muted:#8aa0b6; --text:#e8eef5;
+  --square-dark:#2a3443; --square-light:#3a475b;
+  --accent:#6ba7ff; --good:#39d98a; --bad:#ff6b6b;
+
+  /* JS updates these on #board for pixel-perfect scaling */
+  --cell: 64px;
+  --pieceSize: 52px;
+
+  /* Shared content width on desktop */
+  --content-desktop-width: min(50vw, 720px);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif}
+input,select,button{font:inherit}
+a{color:var(--accent);text-decoration:none}
+
+.app{max-width:1100px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+
+header{display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;margin-top:8px}
+header h1{font-size:28px;margin:0;text-align:center}
+
+.card{background:var(--layer); border:1px solid #222a36; border-radius:12px; padding:12px}
+.row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+
+.btn{background:#1b2432;border:1px solid #2a3443;color:var(--text);padding:6px 10px;border-radius:8px;cursor:pointer}
+.btn.primary{background:linear-gradient(180deg,#2a76ff,#1b5fff);border-color:#2a6aff}
+.muted{color:var(--muted)}
+.badge{font-size:12px;padding:2px 6px;border-radius:8px;background:#203452;border:1px solid #294561}
+
+.stack{display:flex; flex-direction:column; gap:12px}
+
+/* Controls container: same centered width as board on desktop */
+.controls-wrap{width:100%; max-width:100%; margin-inline:auto}
+@media (min-width: 900px){
+  .controls-wrap{ width: var(--content-desktop-width); }
+}
+
+/* Simple helpers */
+.status{min-height:22px}
+.moves{max-height:220px; overflow:auto}
