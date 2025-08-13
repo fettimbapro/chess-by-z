@@ -1,27 +1,29 @@
 // chess-website-uml/public/src/ui/MoveFlash.js
-// BORDER-ONLY glow with no corner seams, 1500ms default, resilient first-move detection,
-// and drag anti-blink. Uses canvas ring + composite (no 'evenodd' clip).
+// BORDER-ONLY glow (seamless ring) focused on the `.board-wrap` card background.
+//  - Default 1500ms
+//  - Draws only in the area around the board (not over it) using canvas + destination-out
+//  - Explicitly targets `.board-wrap` as the glow host
+//  - Robust board detection & mutation triggers ('.sq', '.square', [data-square], [data-piece])
+//  - Anti-blink on drag with delayed first-move pulse if suppressed by pointer tail
 //
-// Public API preserved: window.MoveFlash.{attachTo, flash, setColor}
+// Public API: window.MoveFlash.{attachTo, flash, setColor, test}; window.moveflash alias.
 //
 (function(){
   'use strict';
 
-  // -------------------- config --------------------
   const CONFIG = {
-    duration: 1500,               // default ms
-    colorRGB: [160, 210, 255],    // base glow color (RGB). Alpha is animated.
-    peakAlpha: 0.48,              // slightly brighter
-    pointerTailMs: 240,           // suppression after pointerup / dragend
+    duration: 1500,
+    colorRGB: [160, 210, 255],
+    peakAlpha: 0.5,
+    pointerTailMs: 220,
+    zIndex: 9999
   };
 
-  // -------------------- utils --------------------
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const easeInOutCubic = (t) => (t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2);
   const rgba = (rgb, a) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`;
 
-  // -------------------- styles --------------------
   function injectStyle(){
     if (document.getElementById('move-flash-style')) return;
     const st = document.createElement('style');
@@ -30,36 +32,49 @@
       .mf-card-host { position: relative; isolation: isolate; }
       canvas.mf-overlay-canvas {
         position: absolute; inset: 0; pointer-events: none; display: block;
-        z-index: 2; mix-blend-mode: screen;
+        z-index: ${CONFIG.zIndex}; mix-blend-mode: screen;
       }
     `;
     document.head.appendChild(st);
   }
 
-  // -------------------- DOM helpers --------------------
   function findBoard(){
+    // Prefer a board inside a .board-wrap container
+    const wrap = document.querySelector('.board-wrap');
+    if (wrap){
+      const inside = wrap.querySelector('#board, .board, [data-chess-board], [data-board], [data-board-root]');
+      if (inside) return inside;
+    }
+    // Fallbacks
     return (
       document.getElementById('board') ||
-      document.querySelector('.board, #chessboard, .board-container, [data-board], [data-board-root], [data-chess-board]')
+      document.querySelector('.board, #chessboard, .board-container, [data-chess-board], [data-board], [data-board-root]')
     );
   }
-  function findCard(boardEl){
+
+  function findHost(boardEl){
+    // Explicit preference: .board-wrap ancestor
+    const wrap = boardEl.closest('.board-wrap');
+    if (wrap) return wrap;
+    // Fallbacks
     let card = boardEl.closest?.('[data-board-card]');
     if (!card) card = boardEl.closest?.('.card, .panel, .surface, .box, .tile, .wrapper, .container, .pane, .paper');
     return card || boardEl.parentElement || boardEl;
   }
-  function ensureCanvas(card){
-    card.classList.add('mf-card-host');
-    let cvs = card.querySelector(':scope > canvas.mf-overlay-canvas');
+
+  function ensureCanvas(host){
+    host.classList.add('mf-card-host');
+    let cvs = host.querySelector(':scope > canvas.mf-overlay-canvas');
     if (!cvs){
       cvs = document.createElement('canvas');
       cvs.className = 'mf-overlay-canvas';
-      card.appendChild(cvs);
+      host.appendChild(cvs);
     }
-    const cs = getComputedStyle(card);
-    if (cs.position === 'static') card.style.position = 'relative';
+    const cs = getComputedStyle(host);
+    if (cs.position === 'static') host.style.position = 'relative';
     return cvs;
   }
+
   function resizeCanvas(canvas){
     const rect = canvas.parentElement.getBoundingClientRect();
     const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
@@ -73,15 +88,14 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   }
-  function getRects(card, board){
-    const c = card.getBoundingClientRect();
+
+  function getRects(host, board){
+    const c = host.getBoundingClientRect();
     const b = board.getBoundingClientRect();
     return { cardW: c.width, cardH: c.height, L: b.left - c.left, T: b.top - c.top, R: b.right - c.left, B: b.bottom - c.top };
   }
 
-  // -------------------- drawing --------------------
-  // Draw a single inner stroke to produce shadow, then DESTINATION-OUT the inner rect to remove any interior glow.
-  function drawBorderGlow(ctx, cardW, cardH, L, T, R, B, rgb, alpha){
+  function drawRing(ctx, cardW, cardH, L, T, R, B, rgb, alpha){
     ctx.clearRect(0,0,cardW,cardH);
     if (alpha <= 0) return;
     const innerW = Math.max(0, R - L);
@@ -92,18 +106,16 @@
     const strokeW = Math.max(8, Math.min(cardW, cardH) * 0.03);
     const blur = Math.max(16, Math.min(cardW, cardH) * 0.095);
 
-    // 1) draw shadowed inner stroke
     ctx.save();
     ctx.shadowColor = glow;
     ctx.shadowBlur  = blur;
     ctx.strokeStyle = 'rgba(0,0,0,0)';
     ctx.lineWidth   = strokeW;
-    // pixel alignment for crispness
     const half = ctx.lineWidth % 2 ? 0.5 : 0;
     ctx.strokeRect(L + half, T + half, innerW - ctx.lineWidth + (ctx.lineWidth % 2), innerH - ctx.lineWidth + (ctx.lineWidth % 2));
     ctx.restore();
 
-    // 2) carve out the inner area so glow never covers the board
+    // carve center
     ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
     ctx.fillStyle = 'rgba(0,0,0,1)';
@@ -111,10 +123,9 @@
     ctx.restore();
   }
 
-  // -------------------- core API --------------------
   const API = {
     ready: false,
-    card: null,
+    host: null,
     board: null,
     canvas: null,
     ctx: null,
@@ -125,19 +136,18 @@
       isPointerDown: false,
       lastPointerTs: 0,
       animRAF: 0,
-      supTimer: 0,          // delayed-pulse timer id
-      lastTouchedAt: 0      // time of last relevant .sq mutation
+      supTimer: 0,
+      lastTouchedAt: 0
     },
 
     attachTo(boardEl){
       try{
         injectStyle();
-        const card = findCard(boardEl);
-        const canvas = ensureCanvas(card);
+        const host = findHost(boardEl);
+        const canvas = ensureCanvas(host);
         resizeCanvas(canvas);
         const ctx = canvas.getContext('2d');
 
-        // drag/ptr suppression
         const onDown = () => { this._state.isPointerDown = true;  this._state.lastPointerTs = now(); };
         const onUp   = () => { this._state.isPointerDown = false; this._state.lastPointerTs = now(); };
         ['pointerdown','mousedown','touchstart','dragstart'].forEach(ev =>
@@ -145,35 +155,35 @@
         ['pointerup','mouseup','touchend','touchcancel','dragend','drop'].forEach(ev =>
           boardEl.addEventListener(ev, onUp,   { passive: true, capture: true }));
 
-        // Observe board changes
         const obs = new MutationObserver((list)=>{
-          // ensure canvas is present
           if (!canvas.isConnected){
-            const c2 = ensureCanvas(card);
+            const c2 = ensureCanvas(host);
             resizeCanvas(c2);
             this.canvas = c2;
             this.ctx = c2.getContext('2d');
           }
 
-          // detect .sq mutations
           let touched = false;
           for (const m of list){
             const t = m.target;
             if (t && t.nodeType === 1){
               const el = /** @type {Element} */(t);
-              if (el.classList.contains('sq') || el.closest?.('.sq')){ touched = true; break; }
+              if (
+                el.classList.contains('sq') || el.closest?.('.sq') ||
+                el.classList.contains('square') || el.closest?.('.square') ||
+                el.hasAttribute('data-square') || el.closest?.('[data-square]') ||
+                el.hasAttribute('data-piece') || el.closest?.('[data-piece]')
+              ){ touched = true; break; }
             }
           }
           if (!touched) return;
           this._state.lastTouchedAt = now();
 
-          // suppress during pointer or immediate tail, but schedule a delayed pulse so first engine move after a click still shows
           const sinceUp = now() - this._state.lastPointerTs;
           if (this._state.isPointerDown || sinceUp < CONFIG.pointerTailMs){
             if (this._state.supTimer) clearTimeout(this._state.supTimer);
             this._state.supTimer = setTimeout(()=>{
-              // only pulse if no newer touch happened since we scheduled
-              if (now() - this._state.lastTouchedAt >= CONFIG.pointerTailMs - 10){
+              if (now() - this._state.lastTouchedAt >= CONFIG.pointerTailMs - 5){
                 this.flash();
               }
             }, CONFIG.pointerTailMs + 10);
@@ -187,17 +197,16 @@
           attributeFilter:['class','style','data-square','data-piece']
         });
 
-        // Engine & book events (best-effort names)
         const pulse = ()=> this.flash();
-        ['engine:move','ai:move','game:engineMove','uci:bestmove','book:move','opening:move','bookMove']
-          .forEach(name => document.addEventListener(name, pulse));
+        [
+          'engine:move','ai:move','game:engineMove','uci:bestmove',
+          'book:move','opening:move','bookMove','board:update'
+        ].forEach(name => document.addEventListener(name, pulse));
 
-        // resize
         const onResize = () => { if (this.canvas) resizeCanvas(this.canvas); };
         window.addEventListener('resize', onResize, { passive: true });
 
-        // store
-        this.card = card;
+        this.host = host;
         this.board = boardEl;
         this.canvas = canvas;
         this.ctx = ctx;
@@ -211,12 +220,11 @@
       opts = opts || {};
       const dur = typeof opts.duration === 'number' ? opts.duration : this._state.duration;
       const rgb = this._state.colorRGB;
-      if (!this.canvas || !this.ctx || !this.card || !this.board) return;
+      if (!this.canvas || !this.ctx || !this.host || !this.board) return;
       resizeCanvas(this.canvas);
 
-      const { cardW, cardH, L, T, R, B } = getRects(this.card, this.board);
+      const { cardW, cardH, L, T, R, B } = getRects(this.host, this.board);
       const start = now();
-
       if (this._state.animRAF) cancelAnimationFrame(this._state.animRAF);
 
       const step = () => {
@@ -225,8 +233,7 @@
         const tri = p < 0.5 ? (p / 0.5) : (1 - (p - 0.5)/0.5);
         const eased = easeInOutCubic(tri);
         const alpha = this._state.peakAlpha * eased;
-        drawBorderGlow(this.ctx, cardW, cardH, L, T, R, B, rgb, alpha);
-
+        drawRing(this.ctx, cardW, cardH, L, T, R, B, rgb, alpha);
         if (p < 1){
           this._state.animRAF = requestAnimationFrame(step);
         } else {
@@ -238,10 +245,7 @@
     },
 
     setColor(value){
-      if (Array.isArray(value) && value.length === 3){
-        this._state.colorRGB = value.slice();
-        return;
-      }
+      if (Array.isArray(value) && value.length === 3){ this._state.colorRGB = value.slice(); return; }
       if (typeof value === 'string'){
         const m = value.match(/#([0-9a-f]{6})/i);
         if (m){
@@ -249,33 +253,26 @@
           this._state.colorRGB = [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
           return;
         }
-        const m2 = value.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
-        if (m2){
-          this._state.colorRGB = [ +m2[1], +m2[2], +m2[3] ];
-          return;
-        }
+        const m2 = value.match(/rgb\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)/i);
+        if (m2){ this._state.colorRGB = [ +m2[1], +m2[2], +m2[3] ]; return; }
       }
-      this._state.colorRGB = CONFIG.colorRGB.slice();
-    }
+      this._state.colorRGB = [160,210,255];
+    },
+
+    // Debug helper
+    test(){ this.setColor('rgb(190,230,255)'); this.flash({ duration: 1500 }); }
   };
 
-  // expose
   window.MoveFlash = API;
+  window.moveflash = API;
 
-  // auto attach
   function auto(){
     injectStyle();
     let board = findBoard();
-    if (board){
-      API.attachTo(board);
-      return;
-    }
+    if (board){ API.attachTo(board); return; }
     const mo = new MutationObserver(()=>{
       board = findBoard();
-      if (board){
-        mo.disconnect();
-        API.attachTo(board);
-      }
+      if (board){ mo.disconnect(); API.attachTo(board); }
     });
     mo.observe(document.documentElement, { childList:true, subtree:true });
   }
