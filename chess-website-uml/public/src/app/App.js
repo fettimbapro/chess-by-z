@@ -103,6 +103,36 @@ class App {
     // Init
     this.bindControls();
     this.bindReviewHotkeys();
+
+    // --- Drawing hotkeys ---
+    window.addEventListener('keydown', (e) => {
+      const t = e.target;
+      // don't hijack when typing
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/).test(t.tagName)) return;
+
+      // Clear drawings: X
+      if ((e.key === 'x' || e.key === 'X') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey){
+        e.preventDefault();
+        this.ui.clearUserArrows?.();
+        this.ui.clearUserCircles?.();
+      }
+
+      // Export drawings JSON: ⌘/Ctrl+E
+      if ((e.key === 'e' || e.key === 'E') && (e.metaKey || e.ctrlKey)){
+        e.preventDefault();
+        const data = this.ui.getUserDrawings?.() || {arrows:[], circles:[]};
+        try { navigator.clipboard?.writeText(JSON.stringify(data, null, 2)); this.engineStatus.textContent = 'Copied drawings JSON'; } catch {}
+      }
+
+      // Import drawings JSON: ⌘/Ctrl+I
+      if ((e.key === 'i' || e.key === 'I') && (e.metaKey || e.ctrlKey)){
+        e.preventDefault();
+        const txt = prompt('Paste drawings JSON ({arrows:[{uci,color}], circles:[{sq,color}]})');
+        if (!txt) return;
+        try { this.ui.setUserDrawings?.(JSON.parse(txt)); }
+        catch { this.engineStatus.textContent = 'Invalid drawings JSON'; }
+      }
+    });
     this.bindBoardClickExitReview();
 
     this.syncBoard();
@@ -146,7 +176,6 @@ class App {
       this.lastCelebrationPly = -1;
       this.game.reset();
       this.ui.stopCelebration?.();
-      // Clear user drawings
       this.ui.clearUserArrows?.();
       this.ui.clearUserCircles?.();
       this.syncBoard(); this.refreshAll();
@@ -162,36 +191,6 @@ class App {
     qs('#analyzeBtn').addEventListener('click', () => this.requestAnalysis());
     qs('#hintBtn').addEventListener('click', () => this.requestHint());
     qs('#stopBtn').addEventListener('click', () => this.engine.stop());
-    // === Drawing hotkeys ===
-    window.addEventListener('keydown', (e) => {
-      // Ignore when typing
-      const t = e.target;
-      if (t && (/^(INPUT|TEXTAREA|SELECT)$/).test(t.tagName)) return;
-
-      // Clear drawings: X
-      if ((e.key === 'x' || e.key === 'X') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey){
-        e.preventDefault();
-        this.ui.clearUserArrows?.(); this.ui.clearUserCircles?.();
-      }
-      // Export drawings: Cmd/Ctrl+E
-      if ((e.key === 'e' || e.key === 'E') && (e.metaKey || e.ctrlKey)){
-        e.preventDefault();
-        try {
-          const data = this.ui.getUserDrawings?.() || {arrows:[],circles:[]};
-          navigator.clipboard?.writeText(JSON.stringify(data,null,2));
-          this.engineStatus.textContent = 'Copied drawings JSON';
-        } catch {}
-      }
-      // Import drawings: Cmd/Ctrl+I
-      if ((e.key === 'i' || e.key === 'I') && (e.metaKey || e.ctrlKey)){
-        e.preventDefault();
-        const txt = prompt('Paste drawings JSON ({arrows:[{uci,color}], circles:[{sq,color}]})');
-        if (!txt) return;
-        try { this.ui.setUserDrawings?.(JSON.parse(txt)); }
-        catch { this.engineStatus.textContent = 'Invalid drawings JSON'; }
-      }
-    });
-
   }
 
   // === Review hotkeys & click-to-exit ===
