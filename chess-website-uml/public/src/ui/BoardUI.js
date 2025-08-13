@@ -1,27 +1,32 @@
 // public/src/ui/BoardUI.js
-// BoardUI with highlights, check glow, selection UX, and arrow APIs expected by App.
-// - Last move highlights (.hl-from/.hl-to) — skipped on bulk resets (initial load/New Game).
+// BoardUI with highlights, check glow, selection UX, and hardened arrow handling.
+// - Last-move highlights (.hl-from/.hl-to) only when a *real* move happened (both removal+addition).
+//   Skips on initial load and big resets.
 // - In-check glow (.hl-check).
-// - Click-to-move selection + legal move dots; no random darkening on accidental clicks.
-// - Arrow overlay: drawArrowUci, clearArrow, plus user-drawing noops.
-//   *No opponent arrows:* we auto-clear an arrow if it matches the executed move after setFen
-//   (handles book moves where App draws before syncBoard).
-//
+// - Click-to-move selection + legal move dots; no random darkening.
+// - Arrows: we DO NOT show opponent arrows.
+//   • drawArrowUci(..., true) is ignored (book/engine path).
+//   • setFen() always clears analysis + sys arrows, so nothing sticks.
+
 const FILES = ['a','b','c','d','e','f','g','h'];
+
 const GLYPH = {
   w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
   b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
 };
 
+// ---------------- CSS injection ----------------
 (function injectStyle(){
   if (document.getElementById('boardui-style')) return;
   const st = document.createElement('style');
   st.id = 'boardui-style';
   st.textContent = `
+    /* Selection & hover */
     .sq.sel { outline: 2px solid rgba(120,160,255,.9); outline-offset: -2px; }
     .sq.hover { outline: 2px dashed rgba(120,160,255,.45); outline-offset: -2px; }
     .sq.dragSource { filter: brightness(1.05); }
 
+    /* Legal move dots */
     .sq .dot { width: calc(var(--cell, 48px) * .28); height: calc(var(--cell, 48px) * .28);
       border-radius: 50%; background: radial-gradient(closest-side, rgba(120,160,255,.6), rgba(120,160,255,0));
       pointer-events: none; }
@@ -29,6 +34,7 @@ const GLYPH = {
     .sq .dot.cap { width: calc(var(--cell, 48px) * .42); height: calc(var(--cell, 48px) * .42);
       border: 3px solid rgba(120,160,255,.55); background: transparent; }
 
+    /* Last move & check highlights */
     .sq.hl-from::after, .sq.hl-to::after, .sq.hl-check::after {
       content: ''; position: absolute; inset: 2px; border-radius: 6px; pointer-events: none;
     }
@@ -39,19 +45,14 @@ const GLYPH = {
     .sq { position: relative; }
     .sq:active { filter: none !important; }
 
-    /* Arrow styling */
-    svg#arrowSvg g.analysis line.arrow {
-      stroke-width: 6;
-      stroke-linecap: round;
-      opacity: .9;
-    }
-    svg#arrowSvg g.analysis polygon.head {
-      opacity: .95;
-    }
+    /* Analysis arrows (we’ll clear these on every setFen) */
+    svg#arrowSvg g.analysis line.arrow { stroke-width: 6; stroke-linecap: round; opacity: .9; }
+    svg#arrowSvg g.analysis polygon.head { opacity: .95; }
   `;
   document.head.appendChild(st);
 })();
 
+// ---------------- FEN & helpers ----------------
 function parseFenPieces(fen){
   const out = {};
   if (!fen || typeof fen !== 'string') return { pos: out, turn: 'w' };
@@ -85,7 +86,9 @@ function onBoard(f, r){ return f>=0 && f<8 && r>=0 && r<8; }
 function isSquareAttacked(pos, targetSq, byColor){
   const occ = {};
   for (const [sq,p] of Object.entries(pos)) occ[sq] = p;
+
   const [tf, tr] = sqToXY(targetSq);
+
   const dirsB = [[1,1],[1,-1],[-1,1],[-1,-1]];
   const dirsR = [[1,0],[-1,0],[0,1],[0,-1]];
   const ray = (dirs, types)=>{
@@ -105,12 +108,14 @@ function isSquareAttacked(pos, targetSq, byColor){
   };
   if (ray(dirsB, ['b'])) return true;
   if (ray(dirsR, ['r'])) return true;
+
   const ks = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
   for (const [df,dr] of ks){
     const f=tf+df, r=tr+dr; if (!onBoard(f,r)) continue;
     const sq = `${FILES[f]}${r+1}`;
     const p = occ[sq]; if (p && p.color===byColor && p.type==='n') return true;
   }
+
   const dir = (byColor==='w') ? 1 : -1;
   for (const df of [-1,1]){
     const f=tf+df, r=tr-dir;
@@ -118,6 +123,7 @@ function isSquareAttacked(pos, targetSq, byColor){
     const sq = `${FILES[f]}${r+1}`;
     const p = occ[sq]; if (p && p.color===byColor && p.type==='p') return true;
   }
+
   for (let df=-1; df<=1; df++){
     for (let dr=-1; dr<=1; dr++){
       if (!df && !dr) continue;
@@ -134,7 +140,17 @@ function findKingSquare(pos, color){
   return null;
 }
 
+// --------------- BoardUI -----------------
 export class BoardUI {
+  /**
+   * @param {object} opts
+   * @param {HTMLElement} opts.boardEl
+   * @param {SVGElement} [opts.arrowSvg]
+   * @param {HTMLElement} [opts.promoEl]
+   * @param {(mv:{from:string,to:string,promotion?:'q'|'r'|'b'|'n'})=>boolean} [opts.onUserMove]
+   * @param {(sq:string)=>({type:'p'|'n'|'b'|'r'|'q'|'k', color:'w'|'b'}|null)} [opts.getPieceAt]
+   * @param {(from:string)=>string[]} [opts.getLegalTargets]
+   */
   constructor({ boardEl, arrowSvg=null, promoEl=null, onUserMove=null, getPieceAt=null, getLegalTargets=null }){
     this.boardEl = boardEl;
     this.arrowSvg = arrowSvg || boardEl.querySelector('#arrowSvg') || null;
@@ -142,22 +158,22 @@ export class BoardUI {
     this.onUserMove = onUserMove || (()=>true);
     this.getPieceAt = getPieceAt || (()=>null);
     this.getLegalTargets = getLegalTargets || (()=>[]);
+
     this.orientation = 'white';
     this.fen = 'startpos';
 
+    // interaction
     this.selected = null;
     this.dragTargets = new Set();
     this.dragStart = null;
     this.dragStarted = false;
-    this.justDragged = false;
     this.dragGhost = null;
     this.hoverSq = null;
 
     // last move & arrows
     this._lastFrom = null;
     this._lastTo = null;
-    this._lastUci = null;             // 'e2e4'
-    this._drawnPrimaryUci = null;     // last primary arrow UCI we drew (e.g. from book path)
+    this._lastUci = null;            // 'e2e4'
 
     // position cache
     this._pos = {};
@@ -187,6 +203,7 @@ export class BoardUI {
     this.resizeOverlayViewBox();
   }
 
+  // ---------- DOM creation ----------
   ensureSquares(){
     let overlay = null;
     if (this.arrowSvg && this.arrowSvg.parentElement === this.boardEl){
@@ -209,6 +226,8 @@ export class BoardUI {
         }
       }
       this.boardEl.appendChild(frag);
+
+      // drag ghost
       this.dragGhost = document.createElement('div');
       this.dragGhost.className = 'dragPiece';
       this.dragGhost.style.position = 'absolute';
@@ -238,8 +257,9 @@ export class BoardUI {
 
   ensureOverlayGroups(){
     if (!this.arrowSvg) return;
-    // Respect existing groups from DrawOverlay if present
+    // Use existing sys group if provided by DrawOverlay
     this.gSys = this.arrowSvg.querySelector('g.sys-arrows') || null;
+
     let gAna = this.arrowSvg.querySelector('g.analysis');
     if (!gAna){
       gAna = document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -263,33 +283,35 @@ export class BoardUI {
     this.boardEl.style.setProperty('--cell', `${this.cell}px`);
   }
 
-  // ---------- Core board API ----------
+  // ---------- Board API ----------
   setFen(fen){
     this.fen = fen || 'startpos';
     const { pos, turn } = parseFenPieces(this.fen);
     const prev = this._pos || {};
     const next = pos;
+
+    // update pos/turn and re-render
     this._pos = next;
     this._turn = turn;
     this.renderPosition();
 
-    // Apply highlights from diff, but skip on bulk resets
-    const changedCount = this._countChanged(prev, next);
-    if (changedCount < 8){ // threshold: treat >=8 changed squares as reset (no last-move highlight)
-      this.applyLastMoveFromDiff(prev, next);
+    // Always clear arrows on any executed position update (prevents stuck book arrows)
+    this.clearArrow();
+    this.clearSysArrows();
+
+    // Apply highlights only on genuine moves (needs both addition & removal),
+    // and skip entirely on large resets (initial load, New Game).
+    const diff = this._diffAddsRems(prev, next);
+    const changedCount = diff.changed;
+    const hasMove = diff.added.length > 0 && diff.removed.length > 0;
+
+    if (changedCount < 8 && hasMove){
+      this.applyLastMoveFromDiff(diff);
     } else {
       this._clearLastMoveHl();
     }
-    this.applyCheckHighlight(next, turn);
 
-    // If App drew an arrow just before syncBoard (book move path),
-    // clear it here when it matches the executed move.
-    if (this._drawnPrimaryUci && this._lastUci){
-      if (this._uci4(this._drawnPrimaryUci) === this._lastUci){
-        this.clearArrow();
-        this._drawnPrimaryUci = null;
-      }
-    }
+    this.applyCheckHighlight(next, turn);
   }
 
   setOrientation(side){
@@ -298,6 +320,7 @@ export class BoardUI {
   }
   flip(){ this.setOrientation(this.orientation === 'white' ? 'black' : 'white'); }
 
+  // ---------- Rendering ----------
   renderPosition(){
     const pos = this._pos;
     const squares = this.boardEl.querySelectorAll('.sq');
@@ -307,10 +330,12 @@ export class BoardUI {
         const sq = `${FILES[file]}${rank}`;
         const el = squares[idx];
         const piece = pos[sq];
+
         el.textContent = '';
         el.classList.remove('pw','pb','sel','cap','hover','dragSource','hl-from','hl-to','hl-check');
         el.removeAttribute('data-piece');
         const dot = el.querySelector?.('.dot'); if (dot) dot.remove();
+
         if (piece){
           el.textContent = GLYPH[piece.color][piece.type];
           el.style.fontSize = 'calc(var(--cell) * 0.82)';
@@ -322,47 +347,40 @@ export class BoardUI {
     this.resizeOverlayViewBox();
   }
 
-  // ---------- Highlights ----------
+  // ---------- Diff / Highlights ----------
+  _diffAddsRems(prev, next){
+    const added = [], removed = [];
+    let changed = 0;
+
+    for (let r=1;r<=8;r++){
+      for (let f=0;f<8;f++){
+        const sq = `${FILES[f]}${r}`;
+        const a = prev[sq] || null;
+        const b = next[sq] || null;
+        if ((a?.type)!==(b?.type) || (a?.color)!==(b?.color)){
+          changed++;
+          if (!a && b) added.push({sq, p:b});
+          else if (a && !b) removed.push({sq, p:a});
+          else if (a && b){ removed.push({sq, p:a}); added.push({sq, p:b}); }
+        }
+      }
+    }
+    return { added, removed, changed };
+  }
+
   _clearLastMoveHl(){
     if (this._lastFrom) this.squareEl(this._lastFrom)?.classList?.remove('hl-from');
     if (this._lastTo)   this.squareEl(this._lastTo)?.classList?.remove('hl-to');
     this._lastFrom = this._lastTo = this._lastUci = null;
   }
 
-  _countChanged(prev, next){
-    let changed = 0;
-    for (let r=1;r<=8;r++){
-      for (let f=0;f<8;f++){
-        const sq = `${FILES[f]}${r}`;
-        const a = prev[sq] || null;
-        const b = next[sq] || null;
-        if ((a?.type)!==(b?.type) || (a?.color)!==(b?.color)) changed++;
-      }
-    }
-    return changed;
-  }
-
-  applyLastMoveFromDiff(prev, next){
+  applyLastMoveFromDiff({added, removed}){
     this._clearLastMoveHl();
+    if (!(added && removed) || added.length===0 || removed.length===0) return;
 
-    const removed = [], added = [];
-    for (let r=1;r<=8;r++){
-      for (let f=0;f<8;f++){
-        const sq = `${FILES[f]}${r}`;
-        const a = prev[sq] || null;
-        const b = next[sq] || null;
-        if (!a && b) added.push({sq, p:b});
-        if (a && !b) removed.push({sq, p:a});
-        if (a && b && (a.color!==b.color || a.type!==b.type)){
-          removed.push({sq, p:a});
-          added.push({sq, p:b});
-        }
-      }
-    }
-    if (added.length===0 && removed.length===0) return;
-
-    let fromSq = removed[0]?.sq || null;
-    let toSq   = added[0]?.sq || null;
+    // Prefer king move if present (castling), else take first pair.
+    let fromSq = removed[0].sq;
+    let toSq   = added[0].sq;
     const kingAdd = added.find(x=>x.p.type==='k');
     const kingRem = removed.find(x=>x.p.type==='k');
     if (kingAdd && kingRem){ fromSq = kingRem.sq; toSq = kingAdd.sq; }
@@ -376,6 +394,7 @@ export class BoardUI {
   }
 
   applyCheckHighlight(pos, turn){
+    // Clear any prior check
     for (let r=1;r<=8;r++){
       for (let f=0;f<8;f++){
         this.squareEl(`${FILES[f]}${r}`)?.classList?.remove('hl-check');
@@ -390,23 +409,20 @@ export class BoardUI {
     }
   }
 
-  // ---------- Arrows ----------
-  _uci4(uci){ return (uci||'').slice(0,4); }
-
+  // ---------- Arrow handling ----------
+  // We ignore book/engine arrows entirely (isPrimary=true).
   drawArrowUci(uci, isPrimary){
-    const u4 = this._uci4(uci);
-    // If we already know the last executed move, suppress drawing it.
-    if (this._lastUci && u4 === this._lastUci) return;
-    this._drawnPrimaryUci = isPrimary ? u4 : (this._drawnPrimaryUci || u4);
-
+    if (isPrimary) return; // never draw opponent/book primary arrows
+    // (Optional: keep analysis arrows if you use them with isPrimary=false)
     if (!this.gAnalysis) this.ensureOverlayGroups();
     if (!this.gAnalysis) return;
 
+    const u4 = (uci||'').slice(0,4);
     const from = u4.slice(0,2), to = u4.slice(2,4);
     const {x:x1,y:y1} = this.squareCenterPx(from);
     const {x:x2,y:y2} = this.squareCenterPx(to);
-    if (isPrimary) this.clearArrow();
-    this._drawArrow(x1,y1,x2,y2, isPrimary);
+
+    this._drawAnalysisArrow(x1,y1,x2,y2, /*primary=*/false);
   }
 
   clearArrow(){
@@ -415,7 +431,15 @@ export class BoardUI {
     while (this.gAnalysis.firstChild) this.gAnalysis.removeChild(this.gAnalysis.firstChild);
   }
 
-  _drawArrow(x1,y1,x2,y2, primary){
+  clearSysArrows(){
+    if (!this.arrowSvg) return;
+    // wipe anything another module drew into system layer
+    const gSys = this.arrowSvg.querySelector('g.sys-arrows');
+    if (!gSys) return;
+    while (gSys.firstChild) gSys.removeChild(gSys.firstChild);
+  }
+
+  _drawAnalysisArrow(x1,y1,x2,y2, primary){
     const ns = 'http://www.w3.org/2000/svg';
     const g = document.createElementNS(ns, 'g');
     const line = document.createElementNS(ns, 'line');
@@ -425,6 +449,7 @@ export class BoardUI {
     line.setAttribute('stroke', primary ? 'rgba(120,170,255,.95)' : 'rgba(120,170,255,.65)');
     this.gAnalysis.appendChild(g);
     g.appendChild(line);
+
     const dx = x2 - x1, dy = y2 - y1;
     const len = Math.max(1, Math.hypot(dx,dy));
     const ux = dx / len, uy = dy / len;
@@ -441,7 +466,7 @@ export class BoardUI {
     g.appendChild(head);
   }
 
-  // User drawing API (no-ops that integrate with App hotkeys)
+  // ---------- User drawings API (no-ops) ----------
   clearUserArrows(){ this._userArrows = []; }
   clearUserCircles(){ this._userCircles = []; }
   getUserDrawings(){ return { arrows: this._userArrows.slice(), circles: this._userCircles.slice() }; }
@@ -467,7 +492,6 @@ export class BoardUI {
 
       this.dragStart = { x0: e.clientX, y0: e.clientY, from, glyph: GLYPH[piece.color][piece.type], color: piece.color };
       this.dragStarted = false;
-      this.justDragged = false;
       this.dragTargets = new Set(this.getLegalTargets(from) || []);
       this.selected = from;
       this.clearSelectionDots();
@@ -489,18 +513,19 @@ export class BoardUI {
 
   onPointerMove(e){
     if (!this.dragStart) return;
+
     if (!this.dragStarted){
       const dx = e.clientX - this.dragStart.x0;
       const dy = e.clientY - this.dragStart.y0;
       if ((dx*dx + dy*dy) < 9) return;
       this.dragStarted = true;
-      this.justDragged = true;
       if (this.dragGhost){
         this.dragGhost.textContent = this.dragStart.glyph;
         this.dragGhost.style.display = 'flex';
         this.dragGhost.style.fontSize = 'calc(var(--cell) * 0.82)';
       }
     }
+
     this._pendingEvt = e;
     if (this._rafHandle) return;
     this._rafHandle = requestAnimationFrame(()=>{
@@ -531,6 +556,7 @@ export class BoardUI {
       this.squareEl(this.hoverSq)?.classList?.remove('hover');
       this.hoverSq = null;
     }
+
     const from = this.dragStart?.from;
     const started = this.dragStarted;
     this.dragStart = null;
@@ -551,11 +577,13 @@ export class BoardUI {
   }
 
   attachClick(){
+    // Click-to-move
     this.boardEl.addEventListener('click', (e)=>{
       const sqEl = e.target.closest('.sq'); if (!sqEl) return;
       const sq = sqEl.dataset.square;
       const piece = this.getPieceAt(sq);
 
+      // Move if selected and target is legal
       if (this.selected && this.dragTargets.has(sq)){
         const ok = this.onUserMove({ from: this.selected, to: sq });
         if (ok){
@@ -566,6 +594,7 @@ export class BoardUI {
         return;
       }
 
+      // (Re)select piece, else clear
       if (piece){
         if (this.selected) this.squareEl(this.selected)?.classList?.remove('sel');
         this.selected = sq;
@@ -619,7 +648,7 @@ export class BoardUI {
     const size = Math.min(this.boardEl.clientWidth, this.boardEl.clientHeight);
     const cell = size/8;
     let f = Math.floor(x / cell);
-    let r = 7 - Math.floor(y / cell);
+    let r = 7 - Math.floor(y / cell); // y down -> rank up
     if (this.orientation === 'black'){
       f = 7 - f; r = 7 - r;
     }
