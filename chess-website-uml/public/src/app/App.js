@@ -146,7 +146,7 @@ class App {
       this.lastCelebrationPly = -1;
       this.game.reset();
       this.ui.stopCelebration?.();
-      // clear user drawings
+      // Clear user drawings
       this.ui.clearUserArrows?.();
       this.ui.clearUserCircles?.();
       this.syncBoard(); this.refreshAll();
@@ -162,37 +162,32 @@ class App {
     qs('#analyzeBtn').addEventListener('click', () => this.requestAnalysis());
     qs('#hintBtn').addEventListener('click', () => this.requestHint());
     qs('#stopBtn').addEventListener('click', () => this.engine.stop());
-    // --- Drawing hotkeys ---
+    // === Drawing hotkeys ===
     window.addEventListener('keydown', (e) => {
+      // Ignore when typing
       const t = e.target;
       if (t && (/^(INPUT|TEXTAREA|SELECT)$/).test(t.tagName)) return;
 
-      // Clear all user drawings
+      // Clear drawings: X
       if ((e.key === 'x' || e.key === 'X') && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey){
         e.preventDefault();
-        this.ui.clearUserArrows?.();
-        this.ui.clearUserCircles?.();
-        this.engineStatus.textContent = 'Cleared drawings';
+        this.ui.clearUserArrows?.(); this.ui.clearUserCircles?.();
       }
-
-      // Export drawings (JSON) to clipboard
+      // Export drawings: Cmd/Ctrl+E
       if ((e.key === 'e' || e.key === 'E') && (e.metaKey || e.ctrlKey)){
         e.preventDefault();
-        const data = this.ui.getUserDrawings?.() || {arrows:[],circles:[]};
-        const txt = JSON.stringify(data, null, 2);
-        navigator.clipboard?.writeText(txt).then(()=>{
+        try {
+          const data = this.ui.getUserDrawings?.() || {arrows:[],circles:[]};
+          navigator.clipboard?.writeText(JSON.stringify(data,null,2));
           this.engineStatus.textContent = 'Copied drawings JSON';
-        }).catch(()=>{
-          this.engineStatus.textContent = 'Copy failed (clipboard unavailable)';
-        });
+        } catch {}
       }
-
-      // Import drawings from prompt
+      // Import drawings: Cmd/Ctrl+I
       if ((e.key === 'i' || e.key === 'I') && (e.metaKey || e.ctrlKey)){
         e.preventDefault();
         const txt = prompt('Paste drawings JSON ({arrows:[{uci,color}], circles:[{sq,color}]})');
         if (!txt) return;
-        try { this.ui.setUserDrawings?.(JSON.parse(txt)); this.engineStatus.textContent = 'Imported drawings'; }
+        try { this.ui.setUserDrawings?.(JSON.parse(txt)); }
         catch { this.engineStatus.textContent = 'Invalid drawings JSON'; }
       }
     });

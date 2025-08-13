@@ -31,11 +31,10 @@ export class BoardUI {
     this.hoverSq = null;
     this._rafHandle = 0; this._pendingXY = null;
 
-    // user drawings (right-click)
-    this.drawStart = null;       // {fromSq, x0, y0, modKey}
-    this.userArrows = new Set(); // keys like 'e2e4:g/r/y/b'
-    this.userCircles = new Set(); // keys like 'e4:g/r/y/b'
-    this.gUser = null; this.gSys = null; this.gPreview = null; this.gMarks = null;
+    // user-drawn arrows (right-click drag)
+    this.drawStart = null;       // {fromSq, x0, y0}
+    this.userArrows = new Set(); // 'uci' like 'e2e4'
+    this.gUser = null; this.gSys = null; this.gPreview = null; this.gMarks = null; this.userCircles = new Set();
 
     this.ensureSquares();
     this.ensureArrowLayers();
@@ -44,7 +43,7 @@ export class BoardUI {
     this.attachRightDragToDraw();
 
     // Disable context menu so right-drag works nicely
-    this.boardEl.addEventListener('contextmenu', (e)=> e.preventDefault());
+    this.boardEl.addEventListener('contextmenu', (e)=> e.preventDefault(), { capture:true });
 
     window.addEventListener('resize', () => { this.updateMetrics(); this.resizeOverlay(); this.redrawUserDrawings?.(); });
     this.updateMetrics();
@@ -72,34 +71,8 @@ export class BoardUI {
     this.boardEl.appendChild(this.dragGhost);
   }
 
-
-  // === Drawing helpers (colors & circles) ===
-  colorFromMods(e){
-    if (e.shiftKey) return 'r';
-    if (e.altKey)   return 'y';
-    if (e.ctrlKey || e.metaKey) return 'b';
-    return 'g';
-  }
-  colorToCss(key){
-    return ({ g:'#39d98a', r:'#ff5d5d', y:'#ffd166', b:'#69a7ff' })[key] || '#39d98a';
-  }
-  drawCircleOnLayer(layer, sq, color, sw, dataKey=null){
-    const c = this.squareCenter(sq);
-    const r = this.cell * 0.36;
-    const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    ring.setAttribute('cx', c.x);
-    ring.setAttribute('cy', c.y);
-    ring.setAttribute('r', r);
-    ring.setAttribute('stroke', color);
-    ring.setAttribute('stroke-width', Math.max(6, Math.floor(sw*0.85)));
-    ring.setAttribute('fill', 'none');
-    if (dataKey) ring.setAttribute('data-circle', dataKey);
-    layer.appendChild(ring);
-  }
-
   ensureArrowLayers(){
     if (!this.arrowSvg) return;
-    // three layers: user (green), system (engine/hint), preview (while dragging)
     this.arrowSvg.innerHTML = '';
     this.gUser = document.createElementNS('http://www.w3.org/2000/svg','g');
     this.gUser.setAttribute('class','user-arrows');
@@ -109,6 +82,7 @@ export class BoardUI {
     this.gPreview.setAttribute('class','preview-arrow');
     this.gMarks = document.createElementNS('http://www.w3.org/2000/svg','g');
     this.gMarks.setAttribute('class','user-marks');
+
     this.arrowSvg.appendChild(this.gUser);
     this.arrowSvg.appendChild(this.gSys);
     this.arrowSvg.appendChild(this.gPreview);
@@ -262,25 +236,65 @@ export class BoardUI {
   }
 
   // ===== RIGHT BUTTON: drag-to-draw arrows =====
-
-  // ===== RIGHT BUTTON: drag-to-draw arrows & short-click circles =====
   attachRightDragToDraw(){
-    const onMouseDown = (e) => {
-      const isRight = (e.button === 2) || (e.buttons & 2) || (!!e.ctrlKey && e.button === 0);
+    const onStart = (e) => {
+      // treat right button or ctrl+left as right
+      const isRight = (e.button===2) || (e.buttons & 2) || (!!e.ctrlKey && e.button===0);
       if (!isRight) return;
       const fromSq = this._coordsToSquare(e);
       if (!fromSq) return;
 
       e.preventDefault();
-      const modKey = this.colorFromMods(e);
-      this.drawStart = { fromSq, x0: e.clientX, y0: e.clientY, modKey };
+      const colorKey = this.colorFromMods(e);
+      this.drawStart = { fromSq, x0: e.clientX, y0: e.clientY, colorKey };
+
+      // While dragging, block any context menu anywhere (release might be outside board)
+      const kill = (ev)=> ev.preventDefault();
+      document.addEventListener('contextmenu', kill, { capture:true });
+      this._cmKiller = kill;
+
       this.renderPreview(fromSq, fromSq);
 
-      const move = (ev) => {
+      const moveP = (ev)=>{
         if (!this.drawStart) return;
         const toSq = this._coordsToSquare(ev) || this.drawStart.fromSq;
         this.renderPreview(this.drawStart.fromSq, toSq);
       };
+      const upP = (ev)=>{
+        document.removeEventListener('pointermove', moveP);
+        document.removeEventListener('pointerup', upP);
+        document.removeEventListener('contextmenu', kill, { capture:true });
+        this._cmKiller = null;
+        this.finishRightDrag(ev);
+      };
+
+      if (window.PointerEvent){
+        document.addEventListener('pointermove', moveP, { passive:false });
+        document.addEventListener('pointerup', upP, { passive:false });
+      } else {
+        const move = (ev)=>{
+          if (!this.drawStart) return;
+          const toSq = this._coordsToSquare(ev) || this.drawStart.fromSq;
+          this.renderPreview(this.drawStart.fromSq, toSq);
+        };
+        const up = (ev)=>{
+          document.removeEventListener('mousemove', move);
+          document.removeEventListener('mouseup', up);
+          document.removeEventListener('contextmenu', kill, { capture:true });
+          this._cmKiller = null;
+          this.finishRightDrag(ev);
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+      }
+    };
+
+    if (window.PointerEvent){
+      this.boardEl.addEventListener('pointerdown', onStart, { passive:false });
+    } else {
+      this.boardEl.addEventListener('mousedown', onStart);
+    }
+  };
       const up = (ev) => {
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', up);
@@ -290,10 +304,14 @@ export class BoardUI {
       document.addEventListener('mouseup', up);
     };
 
+    // Prefer pointer events if present; fallback to mouse events
     if (window.PointerEvent){
       this.boardEl.addEventListener('pointerdown', (e)=>{
+        // treat as right if button==2 or buttons&2 or ctrl+click
         const rightish = (e.button===2) || (e.buttons & 2) || (!!e.ctrlKey && e.button===0);
         if (!rightish) return;
+        // Let the mouse fallback handle the drag (for consistency across browsers),
+        // but prevent default + context menu:
         e.preventDefault();
         onMouseDown(e);
       });
@@ -309,27 +327,25 @@ export class BoardUI {
 
     const toSq = this._coordsToSquare(e) || start.fromSq;
     const dx = e.clientX - start.x0, dy = e.clientY - start.y0;
-    const movedEnough = (dx*dx + dy*dy) > 16; // ~4px
+    const movedEnough = (dx*dx + dy*dy) > 16; // 4px
 
-    const colorKey = start.modKey || 'g';
+    const colorKey = start.colorKey || 'g';
     const color = this.colorToCss(colorKey);
     const sw = Math.max(8, Math.floor(this.cell*0.14));
 
-    // Short click/tiny drag -> toggle circle on source
     if (!movedEnough || toSq === start.fromSq){
+      // toggle circle
       const key = `${start.fromSq}:${colorKey}`;
       if (this.userCircles.has(key)){
         this.userCircles.delete(key);
         this.gMarks?.querySelector(`[data-circle="${key}"]`)?.remove();
       } else {
         this.userCircles.add(key);
-        if (!this.gMarks) this.ensureArrowLayers();
         this.drawCircleOnLayer(this.gMarks, start.fromSq, color, sw, key);
       }
       return;
     }
 
-    // Real drag -> toggle arrow
     const uci = start.fromSq + toSq;
     const akey = `${uci}:${colorKey}`;
     if (this.userArrows.has(akey)){
@@ -338,12 +354,14 @@ export class BoardUI {
       node && node.remove();
     } else {
       this.userArrows.add(akey);
-      if (!this.gUser) this.ensureArrowLayers();
       this.drawArrowOnLayer(this.gUser, start.fromSq, toSq, color, sw, akey);
     }
+  } else {
+      // add and draw
+      this.userArrows.add(uci);
+      this.drawArrowOnLayer(this.gUser, start.fromSq, toSq, '#39d98a', Math.max(8, Math.floor(this.cell*0.14)), uci);
+    }
   }
-
-  
 
   _coordsToSquare(ev){
     const { left, top } = this.boardEl.getBoundingClientRect();
@@ -373,50 +391,9 @@ export class BoardUI {
       this.drawArrowOnLayer(this.gUser, from, to, this.colorToCss(colorKey), Math.max(8, Math.floor(this.cell*0.14)), key);
     }
   }
-
-
-  clearUserCircles(){
-    this.userCircles.clear();
-    if (this.gMarks) this.gMarks.innerHTML = '';
   }
 
-  redrawUserCircles(){
-    if (!this.gMarks) return;
-    this.gMarks.innerHTML = '';
-    for (const key of this.userCircles){
-      const [sq, colorKey='g'] = key.split(':');
-      this.drawCircleOnLayer(this.gMarks, sq, this.colorToCss(colorKey), Math.max(8, Math.floor(this.cell*0.14)), key);
-    }
-  }
-
-  redrawUserDrawings(){
-    this.redrawUserArrows();
-    this.redrawUserCircles();
-  }
-
-  getUserDrawings(){
-    return {
-      arrows: Array.from(this.userArrows).map(k=>{ const [uci,color='g']=k.split(':'); return { uci, color }; }),
-      circles: Array.from(this.userCircles).map(k=>{ const [sq,color='g']=k.split(':'); return { sq, color }; })
-    };
-  }
-
-  setUserDrawings({ arrows=[], circles=[] } = {}){
-    this.clearUserArrows();
-    this.clearUserCircles();
-    for (const a of arrows){
-      const ck = (a.color||'g');
-      const key = `${a.uci}:${ck}`;
-      this.userArrows.add(key);
-    }
-    for (const c of circles){
-      const ck = (c.color||'g');
-      const key = `${c.sq}:${ck}`;
-      this.userCircles.add(key);
-    }
-    this.redrawUserDrawings();
-  }
-// ===== Public API =====
+  // ===== Public API =====
   setFen(fen){ this.fen = fen; this.renderPosition(); }
   setOrientation(side){
     this.orientation = (side==='black') ? 'black':'white';
@@ -668,4 +645,51 @@ function parseFenPieces(fen){
     file++;
   }
   return p;
+  // === Drawing helpers (colors & circles) ===
+  colorFromMods(e){
+    if (e.shiftKey) return 'r';
+    if (e.altKey) return 'y';
+    if (e.ctrlKey || e.metaKey) return 'b';
+    return 'g';
+  }
+  colorToCss(key){
+    return ({ g:'#39d98a', r:'#ff5d5d', y:'#ffd166', b:'#69a7ff' })[key] || '#39d98a';
+  }
+  drawCircleOnLayer(layer, sq, color, sw, dataKey=null){
+    const c = this.squareCenter(sq);
+    const r = this.cell * 0.36;
+    const ring = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('cx', c.x);
+    ring.setAttribute('cy', c.y);
+    ring.setAttribute('r', r);
+    ring.setAttribute('stroke', color);
+    ring.setAttribute('stroke-width', Math.max(6, Math.floor(sw*0.85)));
+    ring.setAttribute('fill', 'none');
+    if (dataKey) ring.setAttribute('data-circle', dataKey);
+    layer.appendChild(ring);
+  }
+
+  clearUserCircles(){ this.userCircles.clear(); if (this.gMarks) this.gMarks.innerHTML = ''; }
+  redrawUserCircles(){
+    if (!this.gMarks) return;
+    this.gMarks.innerHTML = '';
+    for (const key of this.userCircles){
+      const [sq, colorKey='g'] = key.split(':');
+      this.drawCircleOnLayer(this.gMarks, sq, this.colorToCss(colorKey), Math.max(8, Math.floor(this.cell*0.14)), key);
+    }
+  }
+  redrawUserDrawings(){ this.redrawUserArrows?.(); this.redrawUserCircles?.(); }
+  getUserDrawings(){
+    return {
+      arrows: Array.from(this.userArrows||[]).map(k=>{ const [uci,color='g']=k.split(':'); return { uci, color }; }),
+      circles: Array.from(this.userCircles||[]).map(k=>{ const [sq,color='g']=k.split(':'); return { sq, color }; }),
+    };
+  }
+  setUserDrawings({ arrows=[], circles=[] } = {}){
+    this.clearUserArrows?.(); this.clearUserCircles?.();
+    for (const a of arrows){ const color=a.color||'g'; const key = `${a.uci}:${color}`; (this.userArrows||this.userArrows===undefined?this.userArrows=new Set():null); this.userArrows.add(key); }
+    for (const c of circles){ const color=c.color||'g'; const key = `${c.sq}:${color}`; this.userCircles.add(key); }
+    this.redrawUserDrawings?.();
+  }
+
 }
