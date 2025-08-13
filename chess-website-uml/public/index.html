@@ -41,7 +41,7 @@
     }
 
     /* Board */
-    #board{
+    #board{ position:relative; 
       width:100%; aspect-ratio:1/1; display:grid;
       grid-template-columns:repeat(8, 1fr);
       grid-template-rows:repeat(8, 1fr);
@@ -130,7 +130,13 @@
       font-size:13px; line-height:1.35;
       white-space:normal; word-wrap:break-word;
     }
-  </style>
+  
+    /* Arrow rendering polish */
+    svg .user-arrows line,
+    svg .sys-arrows line { stroke-linecap: round; }
+    svg .user-arrows polygon,
+    svg .sys-arrows polygon { shape-rendering: geometricPrecision; }
+    </style>
 </head>
 <body>
   <div class="page">
