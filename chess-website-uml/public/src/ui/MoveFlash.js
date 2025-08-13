@@ -1,6 +1,6 @@
 // chess-website-uml/public/src/ui/MoveFlash.js
-// Full drop-in replacement: BORDER-ONLY glow with no corner seams, 1500ms default,
-// robust first-move detection, and drag anti-blink (capture-phase & multiple event types).
+// BORDER-ONLY glow with no corner seams, 1500ms default, resilient first-move detection,
+// and drag anti-blink. Uses canvas ring + composite (no 'evenodd' clip).
 //
 // Public API preserved: window.MoveFlash.{attachTo, flash, setColor}
 //
@@ -11,19 +11,15 @@
   const CONFIG = {
     duration: 1500,               // default ms
     colorRGB: [160, 210, 255],    // base glow color (RGB). Alpha is animated.
-    peakAlpha: 0.46,              // slightly brighter
-    pointerTailMs: 260,           // suppression after pointerup / dragend
-    minSqBuildIgnore: 24          // if going from 0 squares to >= this in one batch, treat as initial build and ignore
+    peakAlpha: 0.48,              // slightly brighter
+    pointerTailMs: 240,           // suppression after pointerup / dragend
   };
 
   // -------------------- utils --------------------
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
   const easeInOutCubic = (t) => (t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2);
-
-  function rgba(rgb, a){
-    return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`;
-  }
+  const rgba = (rgb, a) => `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${a})`;
 
   // -------------------- styles --------------------
   function injectStyle(){
@@ -47,13 +43,11 @@
       document.querySelector('.board, #chessboard, .board-container, [data-board], [data-board-root], [data-chess-board]')
     );
   }
-
   function findCard(boardEl){
     let card = boardEl.closest?.('[data-board-card]');
     if (!card) card = boardEl.closest?.('.card, .panel, .surface, .box, .tile, .wrapper, .container, .pane, .paper');
     return card || boardEl.parentElement || boardEl;
   }
-
   function ensureCanvas(card){
     card.classList.add('mf-card-host');
     let cvs = card.querySelector(':scope > canvas.mf-overlay-canvas');
@@ -66,7 +60,6 @@
     if (cs.position === 'static') card.style.position = 'relative';
     return cvs;
   }
-
   function resizeCanvas(canvas){
     const rect = canvas.parentElement.getBoundingClientRect();
     const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
@@ -80,51 +73,41 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
   }
-
   function getRects(card, board){
     const c = card.getBoundingClientRect();
     const b = board.getBoundingClientRect();
-    return {
-      cardW: c.width,
-      cardH: c.height,
-      L: b.left - c.left,
-      T: b.top - c.top,
-      R: b.right - c.left,
-      B: b.bottom - c.top
-    };
+    return { cardW: c.width, cardH: c.height, L: b.left - c.left, T: b.top - c.top, R: b.right - c.left, B: b.bottom - c.top };
   }
 
   // -------------------- drawing --------------------
-  // Single-pass ring: clip to (outer card) minus (inner board), then stroke inner rect with shadow.
-  // This avoids corner seams because the glow is produced by one stroke's shadow, not four bands.
+  // Draw a single inner stroke to produce shadow, then DESTINATION-OUT the inner rect to remove any interior glow.
   function drawBorderGlow(ctx, cardW, cardH, L, T, R, B, rgb, alpha){
     ctx.clearRect(0,0,cardW,cardH);
     if (alpha <= 0) return;
-
     const innerW = Math.max(0, R - L);
     const innerH = Math.max(0, B - T);
     if (innerW === 0 || innerH === 0) return;
 
     const glow = rgba(rgb, alpha);
-    const strokeW = Math.max(8, Math.min(cardW, cardH) * 0.03); // thickness influences shadow spread
-    const blur = Math.max(16, Math.min(cardW, cardH) * 0.09);
+    const strokeW = Math.max(8, Math.min(cardW, cardH) * 0.03);
+    const blur = Math.max(16, Math.min(cardW, cardH) * 0.095);
 
+    // 1) draw shadowed inner stroke
     ctx.save();
-    // Clip to ring region (outer minus inner)
-    ctx.beginPath();
-    ctx.rect(0,0,cardW,cardH);
-    ctx.rect(L, T, innerW, innerH);
-    ctx.clip('evenodd');
-
-    // Draw shadowed inner stroke; shadow will land only in the clipped ring
     ctx.shadowColor = glow;
-    ctx.shadowBlur = blur;
-    ctx.strokeStyle = 'rgba(0,0,0,0)'; // invisible stroke, we only want the shadow
-    ctx.lineWidth = strokeW;
-
-    // Pixel-align for crisp shadow edge
+    ctx.shadowBlur  = blur;
+    ctx.strokeStyle = 'rgba(0,0,0,0)';
+    ctx.lineWidth   = strokeW;
+    // pixel alignment for crispness
     const half = ctx.lineWidth % 2 ? 0.5 : 0;
     ctx.strokeRect(L + half, T + half, innerW - ctx.lineWidth + (ctx.lineWidth % 2), innerH - ctx.lineWidth + (ctx.lineWidth % 2));
+    ctx.restore();
+
+    // 2) carve out the inner area so glow never covers the board
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.fillRect(L, T, innerW, innerH);
     ctx.restore();
   }
 
@@ -141,9 +124,9 @@
       peakAlpha: CONFIG.peakAlpha,
       isPointerDown: false,
       lastPointerTs: 0,
-      lastSqCount: 0,
-      bootSeen: false,
-      animRAF: 0
+      animRAF: 0,
+      supTimer: 0,          // delayed-pulse timer id
+      lastTouchedAt: 0      // time of last relevant .sq mutation
     },
 
     attachTo(boardEl){
@@ -154,21 +137,17 @@
         resizeCanvas(canvas);
         const ctx = canvas.getContext('2d');
 
-        // Initialize square count to detect initial board build
-        this._state.lastSqCount = boardEl.querySelectorAll('.sq').length;
-        this._state.bootSeen = this._state.lastSqCount > 0;
-
-        // Strong drag suppression: capture-phase & multiple event types
-        const onDown = () => { this._state.isPointerDown = true; this._state.lastPointerTs = now(); };
+        // drag/ptr suppression
+        const onDown = () => { this._state.isPointerDown = true;  this._state.lastPointerTs = now(); };
         const onUp   = () => { this._state.isPointerDown = false; this._state.lastPointerTs = now(); };
         ['pointerdown','mousedown','touchstart','dragstart'].forEach(ev =>
           boardEl.addEventListener(ev, onDown, { passive: true, capture: true }));
         ['pointerup','mouseup','touchend','touchcancel','dragend','drop'].forEach(ev =>
-          boardEl.addEventListener(ev, onUp, { passive: true, capture: true }));
+          boardEl.addEventListener(ev, onUp,   { passive: true, capture: true }));
 
         // Observe board changes
         const obs = new MutationObserver((list)=>{
-          // Ensure canvas is connected
+          // ensure canvas is present
           if (!canvas.isConnected){
             const c2 = ensureCanvas(card);
             resizeCanvas(c2);
@@ -176,7 +155,7 @@
             this.ctx = c2.getContext('2d');
           }
 
-          // Only react to relevant .sq changes
+          // detect .sq mutations
           let touched = false;
           for (const m of list){
             const t = m.target;
@@ -186,25 +165,20 @@
             }
           }
           if (!touched) return;
+          this._state.lastTouchedAt = now();
 
-          // First-move gating: treat a batch that builds many squares as initial layout
-          const curSq = boardEl.querySelectorAll('.sq').length;
-          if (!this._state.bootSeen){
-            if (this._state.lastSqCount === 0 && curSq >= CONFIG.minSqBuildIgnore){
-              // Initial board build; mark seen and skip pulse
-              this._state.bootSeen = true;
-              this._state.lastSqCount = curSq;
-              return;
-            } else {
-              // Squares already existed at attach; mark boot seen so future changes can pulse
-              this._state.bootSeen = true;
-            }
+          // suppress during pointer or immediate tail, but schedule a delayed pulse so first engine move after a click still shows
+          const sinceUp = now() - this._state.lastPointerTs;
+          if (this._state.isPointerDown || sinceUp < CONFIG.pointerTailMs){
+            if (this._state.supTimer) clearTimeout(this._state.supTimer);
+            this._state.supTimer = setTimeout(()=>{
+              // only pulse if no newer touch happened since we scheduled
+              if (now() - this._state.lastTouchedAt >= CONFIG.pointerTailMs - 10){
+                this.flash();
+              }
+            }, CONFIG.pointerTailMs + 10);
+            return;
           }
-          this._state.lastSqCount = curSq;
-
-          // Drag suppression
-          if (this._state.isPointerDown) return;
-          if (now() - this._state.lastPointerTs < CONFIG.pointerTailMs) return;
 
           this.flash();
         });
@@ -213,17 +187,16 @@
           attributeFilter:['class','style','data-square','data-piece']
         });
 
-        // Engine events (optional)
+        // Engine & book events (best-effort names)
         const pulse = ()=> this.flash();
-        ['engine:move','ai:move','game:engineMove','uci:bestmove'].forEach(name => {
-          document.addEventListener(name, pulse);
-        });
+        ['engine:move','ai:move','game:engineMove','uci:bestmove','book:move','opening:move','bookMove']
+          .forEach(name => document.addEventListener(name, pulse));
 
-        // Resize
+        // resize
         const onResize = () => { if (this.canvas) resizeCanvas(this.canvas); };
         window.addEventListener('resize', onResize, { passive: true });
 
-        // Store
+        // store
         this.card = card;
         this.board = boardEl;
         this.canvas = canvas;
@@ -238,14 +211,12 @@
       opts = opts || {};
       const dur = typeof opts.duration === 'number' ? opts.duration : this._state.duration;
       const rgb = this._state.colorRGB;
-
       if (!this.canvas || !this.ctx || !this.card || !this.board) return;
       resizeCanvas(this.canvas);
 
       const { cardW, cardH, L, T, R, B } = getRects(this.card, this.board);
       const start = now();
 
-      // Cancel any running anim to prevent flicker races
       if (this._state.animRAF) cancelAnimationFrame(this._state.animRAF);
 
       const step = () => {
@@ -266,29 +237,24 @@
       this._state.animRAF = requestAnimationFrame(step);
     },
 
-    setColor(color){
-      // Accept 'rgb(r,g,b)' or '#RRGGBB' or array
-      if (Array.isArray(color) && color.length === 3){
-        this._state.colorRGB = color.slice();
+    setColor(value){
+      if (Array.isArray(value) && value.length === 3){
+        this._state.colorRGB = value.slice();
         return;
       }
-      if (typeof color === 'string'){
-        const m = color.match(/#([0-9a-f]{6})/i);
+      if (typeof value === 'string'){
+        const m = value.match(/#([0-9a-f]{6})/i);
         if (m){
           const hex = m[1];
-          const r = parseInt(hex.slice(0,2),16);
-          const g = parseInt(hex.slice(2,4),16);
-          const b = parseInt(hex.slice(4,6),16);
-          this._state.colorRGB = [r,g,b];
+          this._state.colorRGB = [parseInt(hex.slice(0,2),16), parseInt(hex.slice(2,4),16), parseInt(hex.slice(4,6),16)];
           return;
         }
-        const m2 = color.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+        const m2 = value.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
         if (m2){
           this._state.colorRGB = [ +m2[1], +m2[2], +m2[3] ];
           return;
         }
       }
-      // Fallback to default
       this._state.colorRGB = CONFIG.colorRGB.slice();
     }
   };
