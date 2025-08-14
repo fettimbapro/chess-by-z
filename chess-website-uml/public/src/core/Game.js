@@ -20,9 +20,15 @@ export class Game {
 
   get(square){ return this.ch.get(square) || null; }
 
-  legalMovesFrom(square){
+  legalMovesFrom(square, color = null){
     try{
-      return this.ch.moves({ square, verbose:true }).map(m => m.to);
+      if (!color || color === this.ch.turn()){
+        return this.ch.moves({ square, verbose:true }).map(m => m.to);
+      }
+      const parts = this.ch.fen().split(' ');
+      parts[1] = color;
+      const temp = new Chess(parts.join(' '));
+      return temp.moves({ square, verbose:true }).map(m => m.to);
     }catch{ return []; }
   }
 

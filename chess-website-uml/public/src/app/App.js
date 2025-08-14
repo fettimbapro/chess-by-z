@@ -348,24 +348,24 @@ export class App {
 
   getPieceAt(sq){
     const p = this.game.get(sq);
-    const turn = this.game.turn();
     if (this.modeSel.value === 'play'){
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
-      if (turn !== human || !p || p.color !== human) return null;
+      if (!p || p.color !== human) return null;
       return p;
     }
+    const turn = this.game.turn();
     if (!p || p.color !== turn) return null;
     return p;
   }
 
   getLegalTargets(sq){
     const p = this.game.get(sq);
-    const turn = this.game.turn();
     if (this.modeSel.value === 'play'){
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
-      if (turn !== human || !p || p.color !== human) return [];
-      return this.game.legalMovesFrom(sq);
+      if (!p || p.color !== human) return [];
+      return this.game.legalMovesFrom(sq, human);
     }
+    const turn = this.game.turn();
     if (!p || p.color !== turn) return [];
     return this.game.legalMovesFrom(sq);
   }
