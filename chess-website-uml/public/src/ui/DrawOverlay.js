@@ -128,9 +128,8 @@
     this.cell = 0;
     this.orientation = (boardEl.getAttribute('data-orientation') || boardEl.dataset?.orientation) === 'black' ? 'black' : 'white';
 
-    // simple snapshot stack (for ArrowLeft/ArrowRight)
-    this._snapshots = []; // array of {arrows:[...], circles:[...]}
-    this._cursor = 0;     // points *after* the current state (like history)
+    // snapshots keyed by move ply
+    this._snapsByPly = new Map();
 
     this.updateMetrics();
     this.resizeOverlay();
@@ -139,24 +138,6 @@
 
     boardEl.addEventListener('contextmenu', (e)=> e.preventDefault(), true);
     window.addEventListener('resize', ()=>{ this.updateMetrics(); this.resizeOverlay(); this.redrawAll(); });
-
-    // keyboard: restore snapshots on arrow keys
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === 'ArrowLeft'){
-        if (this._cursor > 0){
-          this._cursor--;
-          const snap = this._snapshots[this._cursor];
-          this.setUserDrawings(snap);
-        }
-      } else if (e.key === 'ArrowRight'){
-        if (this._cursor < this._snapshots.length){
-          this._cursor++;
-          // Forward typically means "no helpers"; clear to that snapshot if it exists, else empty.
-          const snap = this._snapshots[this._cursor] || {arrows:[],circles:[]};
-          this.setUserDrawings(snap);
-        }
-      }
-    });
   }
 
   DrawOverlay.prototype.updateMetrics = function(){
@@ -278,11 +259,22 @@
     });
   };
 
+  DrawOverlay.prototype.currentPly = function(){
+    const app = window.app;
+    if (app){
+      return app.inReview ? app.reviewPly : app.getSanHistory().length;
+    }
+    return 0;
+  };
+
   DrawOverlay.prototype.recordSnapshot = function(){
-    const snap = this.getUserDrawings();
-    this._snapshots.splice(this._cursor); // drop anything ahead
-    this._snapshots.push(snap);
-    this._cursor = this._snapshots.length;
+    const ply = this.currentPly();
+    this._snapsByPly.set(ply, this.getUserDrawings());
+  };
+
+  DrawOverlay.prototype.restoreSnapshotForPly = function(ply){
+    const snap = this._snapsByPly.get(ply);
+    this.setUserDrawings(snap || { arrows:[], circles:[] });
   };
 
   DrawOverlay.prototype.finishRightDrag = function(e){
