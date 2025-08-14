@@ -6,6 +6,7 @@ import { PuzzleService } from '../puzzles/PuzzleService.js';
 import { PuzzleUI } from '../puzzles/PuzzleUI.js';
 import { ClockPanel } from '../ui/ClockPanel.js';
 import { detectOpening } from '../engine/Openings.js';
+import { Sounds } from '../util/Sounds.js';
 
 const qs = (s) => document.querySelector(s);
 
@@ -51,6 +52,7 @@ class App {
     this.game = new Game();
     this.clock = new Clock();
     this.engine = new WorkerEngine();
+    this.sounds = new Sounds();
 
     // Clock UI
     this.clockPanel = new ClockPanel({ clock: this.clock, els: clockEls });
@@ -88,7 +90,8 @@ class App {
         randomFromPackBtn: qs('#randomFromPack'), nextPuzzleBtn: qs('#nextPuzzle'),
         hintBtn: qs('#puzzleHint'), puzzleInfo: qs('#puzzleInfo'), puzzleStatus: qs('#puzzleStatus')
       },
-      onStateChanged: () => { this.syncBoard(); this.refreshAll(); }
+      onStateChanged: () => { this.syncBoard(); this.refreshAll(); },
+      onMove: (mv) => this.sounds.play(mv?.captured ? 'capture' : 'move')
     });
 
     // Floating info popover
@@ -346,6 +349,7 @@ class App {
     }
     const mv = this.game.move({ from, to, promotion: promotion || 'q' });
     if (!mv) return false;
+    this.sounds.play(mv.captured ? 'capture' : 'move');
 
     if (this.modeSel.value === 'play') { this.clock.onMoveApplied(); this.clockPanel.startIfNotRunning(); }
     if (this.modeSel.value === 'puzzle') {
@@ -397,6 +401,7 @@ class App {
           this.clock.onMoveApplied?.();
           const last = this.game.historyVerbose?.().slice(-1)[0] || mv;
           if (last?.from && last?.to) this.ui.drawArrowUci(last.from + last.to + (last.promotion||''), true);
+          this.sounds.play(mv.captured ? 'capture' : 'move');
           this.syncBoard(); this.refreshAll();
           this.maybeCelebrate();
           this.checkGameOver();
@@ -415,8 +420,9 @@ class App {
         incrementMs: this.clock.inc
       });
       if (uci) {
-        this.game.moveUci(uci);
+        const mv = this.game.moveUci(uci);
         if (this.modeSel.value === 'play') this.clock.onMoveApplied();
+        this.sounds.play(mv?.captured ? 'capture' : 'move');
         this.syncBoard(); this.refreshAll();
         this.ui.drawArrowUci(uci, true);
         this.maybeCelebrate();
