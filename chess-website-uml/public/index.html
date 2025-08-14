@@ -31,6 +31,9 @@
     /* Board section first; controls below (single column) */
     .stack{display:flex; flex-direction:column; gap:14px}
 
+    /* Board with clocks above and below */
+    .board-area{display:flex; flex-direction:column; align-items:center; gap:8px}
+
     .board-wrap{
       position:relative; background:var(--layer);
       border:1px solid #222a36; border-radius:12px; padding:10px;
@@ -103,6 +106,22 @@
     .status{margin-top:6px; min-height:24px}
     .badge{display:inline-flex; min-width:10px; height:18px; padding:0 6px; align-items:center; justify-content:center; border-radius:999px; background:#112033; border:1px solid #27405c; font-size:12px; color:#cfe2ff}
 
+    /* Clocks */
+    .player-clock{
+      font-family: 'Orbitron', ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size:20px;
+      padding:4px 14px;
+      border-radius:8px;
+      border:1px solid #222a36;
+      background:linear-gradient(145deg,#141a25,#0f141c);
+      color:#e8eef5;
+      box-shadow:inset 0 0 6px rgba(0,0,0,.6),0 0 8px rgba(107,167,255,.25);
+      transition:background .2s,color .2s,box-shadow .2s;
+    }
+    .player-clock.white{background:linear-gradient(145deg,#f2f5f8,#cdd3db);color:#0f1216}
+    .player-clock.black{background:linear-gradient(145deg,#1a212f,#0d1118);color:#e8eef5}
+    .player-clock.active{box-shadow:inset 0 0 6px rgba(0,0,0,.6),0 0 12px var(--accent)}
+
     /* Buttons */
     button{
       background:var(--accent);
@@ -161,27 +180,31 @@
 
     <div class="stack">
       <!-- BOARD FIRST -->
-      <div class="board-wrap">
-        <div class="evalbar" id="evalbar">
-          <div class="white" id="evalWhite"></div>
-          <div class="black" id="evalBlack"></div>
-        </div>
+      <div class="board-area">
+        <div class="player-clock black" id="clockBlack">05:00</div>
+        <div class="board-wrap">
+          <div class="evalbar" id="evalbar">
+            <div class="white" id="evalWhite"></div>
+            <div class="black" id="evalBlack"></div>
+          </div>
 
-        <div id="board">
-          <!-- 64 squares created by JS -->
-          <svg class="arrow" id="arrowSvg" viewBox="0 0 800 800" preserveAspectRatio="none"></svg>
-        </div>
-        <canvas id="fireworks" class="fxCanvas" aria-hidden="true"></canvas>
+          <div id="board">
+            <!-- 64 squares created by JS -->
+            <svg class="arrow" id="arrowSvg" viewBox="0 0 800 800" preserveAspectRatio="none"></svg>
+          </div>
+          <canvas id="fireworks" class="fxCanvas" aria-hidden="true"></canvas>
 
-        <!-- Promotion dialog -->
-        <div class="promo" id="promo">
-          <div class="box">
-            <div class="opt" data-piece="q">♛</div>
-            <div class="opt" data-piece="r">♜</div>
-            <div class="opt" data-piece="b">♝</div>
-            <div class="opt" data-piece="n">♞</div>
+          <!-- Promotion dialog -->
+          <div class="promo" id="promo">
+            <div class="box">
+              <div class="opt" data-piece="q">♛</div>
+              <div class="opt" data-piece="r">♜</div>
+              <div class="opt" data-piece="b">♝</div>
+              <div class="opt" data-piece="n">♞</div>
+            </div>
           </div>
         </div>
+        <div class="player-clock white" id="clockWhite">05:00</div>
       </div>
 
       <!-- CONTROLS UNDER THE BOARD -->
@@ -241,19 +264,13 @@
 
         <hr />
 
-        <!-- Clock settings + clocks together -->
+        <!-- Clock settings -->
         <div class="row">
           <label>Clock</label>
           <input type="number" id="timeMin" value="5" min="1" max="180" />
           <span class="muted">min</span>
           <input type="number" id="incSec" value="3" min="0" max="60" />
           <span class="muted">+ sec</span>
-          <button id="startClocks">Start</button>
-          <button id="pauseClocks">Pause</button>
-          <button id="resetClocks">Reset</button>
-          <div style="flex:1"></div>
-          <div class="badge" id="clockWhite">05:00</div>
-          <div class="badge" id="clockBlack">05:00</div>
         </div>
       </div>
 

@@ -41,9 +41,6 @@ class App {
       black: qs('#clockBlack'),
       timeMin: qs('#timeMin'),
       incSec: qs('#incSec'),
-      start: qs('#startClocks'),
-      pause: qs('#pauseClocks'),
-      reset: qs('#resetClocks'),
       turnSupplier: () => this.game.turn()
     };
 
