@@ -24,6 +24,9 @@ class App {
 
     this.pvBox = qs('#pvBox');
     this.engineStatus = qs('#engineStatus');
+    this.infoTurn = qs('#infoTurn');
+    this.infoOpening = qs('#infoOpening');
+    this.infoMoves = qs('#infoMoves');
 
     // Controls
     this.modeSel = qs('#mode');
@@ -94,9 +97,6 @@ class App {
       onStateChanged: () => { this.syncBoard(); this.refreshAll(); },
       onMove: (mv) => this.playMoveSound(mv)
     });
-
-    // Floating info popover
-    this.installGameInfoPopover();
 
     // --- REVIEW MODE state ---
     this.inReview = false;      // true when viewing a past position
@@ -520,49 +520,15 @@ class App {
 
   refreshAll(){
     this.updateStatusMinimal();
-    this.updateGameInfo();   // info popover content
+    this.updateGameInfo();
   }
 
   updateStatusMinimal(){
-    // Minimal status; detailed info is in popover.
-  }
-
-
-  // === Game Info Popover ===
-  installGameInfoPopover(){
-    const wrap = document.querySelector('.board-wrap');
-    if (!wrap) return;
-
-    // Trigger
-    this.infoBtn = document.createElement('button');
-    this.infoBtn.type = 'button';
-    this.infoBtn.className = 'game-info-trigger';
-    this.infoBtn.setAttribute('aria-label','Game info');
-    this.infoBtn.textContent = 'ⓘ';
-
-    // Popover
-    this.infoPop = document.createElement('div');
-    this.infoPop.className = 'game-info-pop';
-    this.infoPop.innerHTML = '<div class="tip-row"><span class="tip-label">Loading…</span></div>';
-
-    wrap.appendChild(this.infoBtn);
-    wrap.appendChild(this.infoPop);
-
-    // Behavior
-    this.infoBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.infoPop.classList.toggle('open');
-    });
-    document.addEventListener('click', (e) => {
-      if (!this.infoPop.classList.contains('open')) return;
-      if (e.target === this.infoBtn) return;
-      if (this.infoPop.contains(e.target)) return;
-      this.infoPop.classList.remove('open');
-    });
+    // Minimal status; detailed info is in the card.
   }
 
   updateGameInfo(){
-    if (!this.infoPop) return;
+    if (!this.infoTurn || !this.infoOpening || !this.infoMoves) return;
 
     // 1) Turn
     let turnSide;
@@ -580,20 +546,9 @@ class App {
     // 3) Moves (numbered, compact)
     const movesText = this.formatMoves(sanHist) || '—';
 
-    this.infoPop.innerHTML = `
-      <div class="tip-row">
-        <span class="tip-label">Turn</span>
-        <span class="tip-value">${turnSide}${this.inReview ? ' (review)' : ''}</span>
-      </div>
-      <div class="tip-row">
-        <span class="tip-label">Opening</span>
-        <span class="tip-value">${openingName}</span>
-      </div>
-      <div class="tip-row">
-        <span class="tip-label">Moves</span>
-        <div class="tip-moves">${movesText}</div>
-      </div>
-    `;
+    this.infoTurn.textContent = turnSide + (this.inReview ? ' (review)' : '');
+    this.infoOpening.textContent = openingName;
+    this.infoMoves.textContent = movesText;
   }
 
   getSanHistory(){
