@@ -144,7 +144,6 @@ class App {
 
     this.syncBoard();
     this.refreshAll();
-    this.updateEloDisplay?.();
 
     // Do NOT start clocks yet; only after the human makes their first move.
     if (this.modeSel.value === 'play') {
@@ -157,9 +156,9 @@ class App {
       const f = () => { label.textContent = el.value; after && after(); };
       el.addEventListener('input', f); f();
     };
-    link(this.elo, this.eloVal, () => this.updateEloDisplay?.());
-    link(this.depth, this.depthVal, () => this.updateEloDisplay?.());
-    link(this.multipv, this.multipvVal, () => this.updateEloDisplay?.());
+    link(this.elo, this.eloVal);
+    link(this.depth, this.depthVal);
+    link(this.multipv, this.multipvVal);
 
     this.modeSel.addEventListener('change', () => {
       const m = this.modeSel.value;
@@ -196,10 +195,6 @@ class App {
         }, 2000);
       }
     });
-
-    qs('#analyzeBtn').addEventListener('click', () => this.requestAnalysis());
-    qs('#hintBtn').addEventListener('click', () => this.requestHint());
-    qs('#stopBtn').addEventListener('click', () => this.engine.stop());
 
     // PGN / FEN helpers
     qs('#copyPgn').addEventListener('click', () => {
@@ -526,30 +521,12 @@ class App {
   refreshAll(){
     this.updateStatusMinimal();
     this.updateGameInfo();   // info popover content
-    this.updateEloDisplay?.();
   }
 
   updateStatusMinimal(){
     // Minimal status; detailed info is in popover.
   }
 
-  // === HONEST UI ELO (display-only estimate) ===
-  updateEloDisplay(){
-    if (!this.elo || !this.eloVal) return;
-
-    const percent = parseInt(this.elo.value, 10) || 0;
-    const engineElo = Math.round(800 + (percent/100)*(3000-800));
-    const depthCap = parseInt(this.depth?.value || '0', 10) || 0;
-    const thinkMs  = window.engineTuner?.lastMovetime || 0;
-
-    const est = estimateUiElo(engineElo, depthCap, thinkMs);
-
-    this.eloVal.textContent = `${percent}%`;
-    this.eloVal.title = `Engine param: ${engineElo}`;
-
-    const autoSummary = qs('#autoSummary');
-    if (autoSummary) autoSummary.textContent = `Estimated strength: ≈ ${est}`;
-  }
 
   // === Game Info Popover ===
   installGameInfoPopover(){
@@ -710,22 +687,6 @@ class App {
       this.ui.celebrate?.();
     }
   }
-}
-
-// Conservative UI-only Elo estimate
-function estimateUiElo(engineElo, depthCap, thinkMs){
-  let base;
-  if (engineElo <= 1000) base = 700;
-  else if (engineElo <= 1300) base = 900;
-  else if (engineElo <= 1600) base = 1100;
-  else if (engineElo <= 1900) base = 1200;
-  else base = 1200;
-
-  const depthAdj = Math.max(-50, Math.min(50, (depthCap - 8) * 6)); // ±50
-  const timeAdj  = Math.max(0, Math.min(40, Math.log10(Math.max(100, thinkMs)) * 10 - 20)); // ~0..40
-
-  const est = Math.round(Math.max(600, Math.min(1300, base + depthAdj + timeAdj)));
-  return est;
 }
 
 window.addEventListener('DOMContentLoaded', () => new App());

@@ -13,7 +13,6 @@ function collectDom(){
     // controls
     mode: $('mode'),
     auto: $('autoTune'),
-    autoSummary: $('autoSummary'),
     elo: $('elo'), eloVal: $('eloVal'),
     depth: $('depth'), depthVal: $('depthVal'),
     multipv: $('multipv'), multipvVal: $('multipvVal'),
