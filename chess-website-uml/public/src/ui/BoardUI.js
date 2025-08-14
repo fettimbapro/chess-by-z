@@ -371,6 +371,7 @@ export class BoardUI {
           ? `${FILES[file]}${rank}`
           : `${FILES[7 - file]}${9 - rank}`;
         const el = squares[idx];
+        el.dataset.square = sq;
         const piece = pos[sq];
 
         // clear
