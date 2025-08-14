@@ -142,27 +142,7 @@
     button:hover{ background:#5b97f0; }
     button:active{ transform:translateY(1px); }
 
-    /* Game info button + popover (App.js injects the button; styles here) */
-    .game-info-trigger{
-      position:absolute; top:12px; right:12px;
-      width:28px; height:28px;
-      display:flex; align-items:center; justify-content:center;
-      background:#0f141c; color:#cfe2ff;
-      border:1px solid #27405c; border-radius:999px;
-      font-weight:700; font-size:14px; line-height:1; cursor:pointer;
-    }
-    .game-info-trigger:hover{ background:#122032; }
-    .game-info-pop{
-      position:absolute; top:12px; right:12px; transform: translateY(36px);
-      width:min(90vw, 360px);
-      background:#0c1118; border:1px solid #1c2533; border-radius:12px; padding:10px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.45);
-      z-index:40; display:none;
-    }
-    .game-info-pop.open{ display:block; }
-    .tip-row{ display:flex; gap:8px; margin:6px 0; align-items:flex-start }
-    .tip-label{ min-width:82px; color:var(--muted) }
-    .tip-value{ flex:1 }
+    /* Game info text styling */
     .tip-moves{
       flex:1;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -235,11 +215,23 @@
           <div class="pv" id="pvBox"></div>
         </div>
         <div class="row">
-          <div id="engineStatus" class="muted">Engine: ready</div>
+          <label class="muted">Turn</label>
+          <span id="infoTurn">—</span>
+        </div>
+        <div class="row">
+          <label class="muted">Opening</label>
+          <span id="infoOpening">—</span>
+        </div>
+        <div class="row">
+          <label class="muted">Moves</label>
+          <div class="tip-moves" id="infoMoves">—</div>
         </div>
 
         <details id="advancedControls">
           <summary>Advanced</summary>
+          <div class="row">
+            <div id="engineStatus" class="muted">Engine: ready</div>
+          </div>
           <div class="row" id="knobsRow">
             <label class="muted">Elo</label>
             <input type="range" id="elo" min="1" max="100" step="1" value="100" />
