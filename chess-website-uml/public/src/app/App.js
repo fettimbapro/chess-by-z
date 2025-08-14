@@ -26,8 +26,9 @@ class App {
     // Controls
     this.modeSel = qs('#mode');
     this.sideSel = qs('#side');
-    this.flipBtn = qs('#flip');
-    this.newGameBtn = qs('#newGame');
+    this.switchBtn = qs('#switchSide');
+    this.confirmRestart = false;
+    this.confirmTimeout = null;
     this.pgnText = qs('#pgnText');
     this.fenText = qs('#fenText');
 
@@ -71,6 +72,7 @@ class App {
       getLegalTargets: this.getLegalTargets.bind(this)
     });
     this.ui.setOrientation(this.sideSel.value);
+    this.updateSwitchButtonText();
 
     // Puzzles
     this.puzzleService = new PuzzleService();
@@ -169,26 +171,28 @@ class App {
       this.ui.setOrientation(this.sideSel.value);
       this.refreshAll();
       this.maybeEngineMove();
+      this.updateSwitchButtonText();
     });
 
-    this.flipBtn.addEventListener('click', () => this.ui.flip());
-
-    this.newGameBtn.addEventListener('click', () => {
-      this.exitReview(); // ensure back to live
-      this.lastCelebrationPly = -1;
-      this.gameOver = false;
-      this.game.reset();
-      this.ui.stopCelebration?.();
-      this.ui.clearUserArrows?.();
-      this.ui.clearUserCircles?.();
-      this.syncBoard(); this.refreshAll();
-
-      this.clockPanel.applyInputs?.();
-      this.clockPanel.render();
-
-      if (this.modeSel.value === 'analysis') this.requestAnalysis();
-      else if (this.modeSel.value === 'play') { this.maybeEngineMove(); }
-      else if (this.modeSel.value === 'puzzle') { this.puzzles.resetProgress(); this.clockPanel.pause(); }
+    this.switchBtn.addEventListener('click', () => {
+      if (this.confirmRestart) {
+        clearTimeout(this.confirmTimeout);
+        this.confirmRestart = false;
+        this.switchBtn.classList.remove('confirm');
+        this.sideSel.value = (this.sideSel.value === 'white') ? 'black' : 'white';
+        this.ui.setOrientation(this.sideSel.value);
+        this.startNewGame();
+        this.updateSwitchButtonText();
+      } else {
+        this.confirmRestart = true;
+        this.switchBtn.textContent = 'Restart?';
+        this.switchBtn.classList.add('confirm');
+        this.confirmTimeout = setTimeout(() => {
+          this.confirmRestart = false;
+          this.switchBtn.classList.remove('confirm');
+          this.updateSwitchButtonText();
+        }, 2000);
+      }
     });
 
     qs('#analyzeBtn').addEventListener('click', () => this.requestAnalysis());
@@ -232,6 +236,28 @@ class App {
         this.engineStatus.textContent = 'Invalid FEN';
       }
     });
+  }
+
+  startNewGame(){
+    this.exitReview();
+    this.lastCelebrationPly = -1;
+    this.gameOver = false;
+    this.game.reset();
+    this.ui.stopCelebration?.();
+    this.ui.clearUserArrows?.();
+    this.ui.clearUserCircles?.();
+    this.syncBoard();
+    this.refreshAll();
+    this.clockPanel.applyInputs?.();
+    this.clockPanel.render();
+    if (this.modeSel.value === 'analysis') this.requestAnalysis();
+    else if (this.modeSel.value === 'play') { this.maybeEngineMove(); }
+    else if (this.modeSel.value === 'puzzle') { this.puzzles.resetProgress(); this.clockPanel.pause(); }
+  }
+
+  updateSwitchButtonText(){
+    const next = (this.sideSel.value === 'white') ? 'black' : 'white';
+    this.switchBtn.textContent = `Switch to ${next} and restart`;
   }
 
   // === Review hotkeys & click-to-exit ===
