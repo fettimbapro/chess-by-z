@@ -130,3 +130,4 @@ test('recently queued pre-move survives click from drop', async () => {
   boardEl._handler({ target: { closest(){ return null; } } });
   assert.equal(canceled, true);
 });
+

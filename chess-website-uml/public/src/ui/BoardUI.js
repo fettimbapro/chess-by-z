@@ -227,6 +227,7 @@ export class BoardUI {
     this._preTo = null;
     this._preJustQueued = null;
 
+
     // position cache
     this._pos = {};
     this._turn = 'w';
