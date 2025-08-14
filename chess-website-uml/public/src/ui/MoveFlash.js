@@ -100,16 +100,20 @@
   }
 
   function diffCounts(prev, next){
-    let changed = 0, additions = 0;
+    let changed = 0, additions = 0, wAdds = 0, bAdds = 0;
     for (const sq in next){
       const a = prev[sq] || null;
       const b = next[sq] || null;
       if (a !== b){
         changed++;
-        if (b) additions++;
+        if (b){
+          additions++;
+          if (b === 'w') wAdds++;
+          else if (b === 'b') bAdds++;
+        }
       }
     }
-    return { changed, additions };
+    return { changed, additions, wAdds, bAdds };
   }
 
   // ---------- core ----------
@@ -151,17 +155,17 @@
 
             // Compare current board vs tail start to count total additions inside tail
             const nowSnap = takeSnapshot(boardEl);
-            const { changed, additions } = diffCounts(this._state.tailStartSnap, nowSnap);
+            const { changed, additions, wAdds, bAdds } = diffCounts(this._state.tailStartSnap, nowSnap);
 
             if (changed >= CONFIG.bulkThreshold){
               // Reset/init event inside tail → do nothing
               this._state.awaitingOpponent = false;
-            } else if (additions >= 2){
+            } else if (wAdds && bAdds){
               // Your move + instant book reply happened within tail → flash once now
               this.flash();
               this._state.awaitingOpponent = false;
-            } else if (additions === 1){
-              // Only your move inside tail → wait for opponent outside tail
+            } else if (additions >= 1){
+              // Only your move inside tail (including castling) → wait for opponent outside tail
               this._state.awaitingOpponent = true;
             } else {
               this._state.awaitingOpponent = false;
@@ -196,7 +200,7 @@
 
             const prev = this._state.lastSnap || takeSnapshot(boardEl);
             const next = takeSnapshot(boardEl);
-            const { changed, additions } = diffCounts(prev, next);
+            const { changed } = diffCounts(prev, next);
 
             // Update baseline immediately
             this._state.lastSnap = next;
