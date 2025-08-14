@@ -32,6 +32,25 @@ export class Game {
     }catch{ return []; }
   }
 
+  premoveLegalMovesFrom(square, color){
+    const moves = new Set(this.legalMovesFrom(square, color));
+    if (!color || color === this.ch.turn()) return Array.from(moves);
+    const baseFenParts = this.ch.fen().split(' ');
+    baseFenParts[1] = color;
+    const baseFen = baseFenParts.join(' ');
+    for (const row of this.ch.board()){
+      for (const piece of row){
+        if (piece && piece.color === color && piece.square !== square){
+          const temp = new Chess(baseFen);
+          temp.remove(piece.square);
+          const mvs = temp.moves({ square, verbose: true }).map(m => m.to);
+          if (mvs.includes(piece.square)) moves.add(piece.square);
+        }
+      }
+    }
+    return Array.from(moves);
+  }
+
   move(obj){ const m = this.ch.move(obj); if (m) this.redo.length = 0; return m; }
   moveUci(uci){
     const m = uci.match(/^([a-h][1-8])([a-h][1-8])([qrbn])?$/); if (!m) return null;
