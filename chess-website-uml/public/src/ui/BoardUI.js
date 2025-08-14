@@ -83,6 +83,19 @@ const BLACK_GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     /* Analysis arrows (we clear them on setFen) */
     svg#arrowSvg g.analysis line.arrow { stroke-width: 6; stroke-linecap: round; opacity: .9; }
     svg#arrowSvg g.analysis polygon.head { opacity: .95; }
+
+    /* Celebration confetti */
+    .confetti-root { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:5; }
+    .confetti-piece {
+      position:absolute;
+      top:-10px;
+      width:8px; height:8px;
+      opacity:.9;
+      animation: confetti-fall 1.6s ease-out forwards;
+    }
+    @keyframes confetti-fall {
+      to { transform: translateY(110%); opacity:0; }
+    }
   `;
   document.head.appendChild(st);
 })();
@@ -195,6 +208,10 @@ export class BoardUI {
     this.dragStarted = false;
     this.dragGhost = null;
     this.hoverSq = null;
+
+    // celebration state
+    this._celebrationRoot = null;
+    this._celebrationTimer = null;
 
     // last move
     this._lastFrom = null;
@@ -698,5 +715,39 @@ export class BoardUI {
     f = Math.max(0, Math.min(7, f));
     r = Math.max(0, Math.min(7, r));
     return `${FILES[f]}${r+1}`;
+  }
+
+  // -------- celebration --------
+  celebrate(){
+    // remove any existing celebration
+    this.stopCelebration();
+
+    const root = document.createElement('div');
+    root.className = 'confetti-root';
+    this.boardEl.appendChild(root);
+
+    const colors = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
+    for (let i = 0; i < 40; i++){
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + '%';
+      piece.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+      piece.style.animationDelay = (Math.random() * 0.7).toFixed(2) + 's';
+      root.appendChild(piece);
+    }
+
+    this._celebrationRoot = root;
+    this._celebrationTimer = setTimeout(()=>this.stopCelebration(), 1600);
+  }
+
+  stopCelebration(){
+    if (this._celebrationTimer){
+      clearTimeout(this._celebrationTimer);
+      this._celebrationTimer = null;
+    }
+    if (this._celebrationRoot){
+      this._celebrationRoot.remove();
+      this._celebrationRoot = null;
+    }
   }
 }
