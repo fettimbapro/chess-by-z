@@ -4,12 +4,15 @@
 
 const OPENINGS = {
   // Starting shells
-  "e4": "King's Pawn Game",
-  "d4": "Queen's Pawn Game",
-  "c4": "English Opening",
-  "Nf3": "Réti Opening",
-  "g3": "King's Fianchetto Opening",
-  "b3": "Larsen's Opening",
+  e4: "King's Pawn Game",
+  d4: "Queen's Pawn Game",
+  c4: "English Opening",
+  Nf3: "Réti Opening",
+  g3: "King's Fianchetto Opening",
+  b3: "Larsen's Opening",
+  f4: "Bird's Opening",
+  Nc3: "Dunst Opening",
+  b4: "Sokolsky Opening",
 
   // Open Games
   "e4 e5": "Open Game",
@@ -20,16 +23,22 @@ const OPENINGS = {
   "e4 e5 Nf3 Nc6 Bb5": "Ruy Lopez",
   "e4 e5 Nf3 Nc6 Bb5 a6": "Ruy Lopez, Morphy Defense",
   "e4 e5 Nf3 Nc6 Bb5 a6 Ba4": "Ruy Lopez, Morphy Defense",
+  "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6": "Ruy Lopez, Closed",
+  "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O": "Ruy Lopez, Closed",
   "e4 e5 Nf3 Nc6 Bb5 Nf6": "Ruy Lopez, Berlin Defense",
+  "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O": "Ruy Lopez, Berlin Defense",
 
   // Italian / Giuoco Piano / Two Knights
   "e4 e5 Nf3 Nc6 Bc4": "Italian Game",
   "e4 e5 Nf3 Nc6 Bc4 Bc5": "Giuoco Piano",
+  "e4 e5 Nf3 Nc6 Bc4 Bc5 c3": "Giuoco Piano, Main Line",
   "e4 e5 Nf3 Nc6 Bc4 Nf6": "Two Knights Defense",
+  "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5": "Two Knights Defense, Fried Liver Attack",
 
   // Scotch
   "e4 e5 Nf3 Nc6 d4": "Scotch Game",
   "e4 e5 Nf3 Nc6 d4 exd4": "Scotch Game",
+  "e4 e5 Nf3 Nc6 d4 exd4 Nxd4": "Scotch Game",
 
   // Four Knights
   "e4 e5 Nf3 Nc6 Nc3": "Four Knights Game",
@@ -50,6 +59,7 @@ const OPENINGS = {
   "e4 c5 Nf3 Nc6": "Sicilian Defense, Classical/Accelerated Dragon shells",
   "e4 c5 Nf3 d6 d4 cxd4 Nxd4": "Sicilian Defense, Open",
   "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6": "Sicilian Defense, Najdorf",
+  "e4 c5 Nf3 Nc6 d4 cxd4 Nxd4 Nf6 Nc3 e5": "Sicilian Defense, Sveshnikov",
 
   // French
   "e4 e6": "French Defense",
@@ -57,6 +67,7 @@ const OPENINGS = {
   "e4 e6 d4 d5 Nc3": "French Defense, Classical",
   "e4 e6 d4 d5 Nd2": "French Defense, Tarrasch",
   "e4 e6 d4 d5 e5": "French Defense, Advance",
+  "e4 e6 d4 d5 Nc3 Bb4": "French Defense, Winawer",
 
   // Caro–Kann
   "e4 c6": "Caro–Kann Defense",
@@ -102,18 +113,25 @@ const OPENINGS = {
 };
 
 export function detectOpening(sanMoves) {
-  const list = Array.isArray(sanMoves) ? sanMoves.slice() : String(sanMoves||'').trim().split(/\s+/);
-  const hist = list.join(' ').trim();
-  if (!hist) return '';
+  const list = Array.isArray(sanMoves)
+    ? sanMoves.slice()
+    : String(sanMoves || "")
+        .trim()
+        .split(/\s+/);
+  const hist = list.join(" ").trim();
+  if (!hist) return "";
 
   // Try longest prefix match
-  let best = '';
+  let best = "";
   let bestLen = -1;
   for (const key of Object.keys(OPENINGS)) {
     if (!key) continue;
-    if (hist === key || hist.startsWith(key + ' ')) {
-      if (key.length > bestLen) { best = OPENINGS[key]; bestLen = key.length; }
+    if (hist === key || hist.startsWith(key + " ")) {
+      if (key.length > bestLen) {
+        best = OPENINGS[key];
+        bestLen = key.length;
+      }
     }
   }
-  return best || '';
+  return best || "";
 }
