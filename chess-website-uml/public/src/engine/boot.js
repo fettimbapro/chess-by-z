@@ -16,7 +16,6 @@ function collectDom(){
     autoSummary: $('autoSummary'),
     elo: $('elo'), eloVal: $('eloVal'),
     depth: $('depth'), depthVal: $('depthVal'),
-    think: $('think'), thinkVal: $('thinkVal'),
     multipv: $('multipv'), multipvVal: $('multipvVal'),
     // badges
     threadsBadge: $('threadsBadge'),

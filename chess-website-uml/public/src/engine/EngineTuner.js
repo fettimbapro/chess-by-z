@@ -9,6 +9,7 @@ export class EngineTuner {
     this.adapter = adapter;         // EngineAdapter
     this.dom = dom || {};
     this.caps = detectCaps();
+    this.lastMovetime = 300;
   }
 
   init() {
@@ -25,7 +26,6 @@ export class EngineTuner {
       this.dom.auto?.addEventListener(ev, () => this.retune());
       this.dom.elo?.addEventListener(ev, () => this.retune());
       this.dom.depth?.addEventListener(ev, () => this.pushManual());
-      this.dom.think?.addEventListener(ev, () => this.pushManual());
       this.dom.multipv?.addEventListener(ev, () => this.pushManual());
     });
 
@@ -50,22 +50,21 @@ export class EngineTuner {
   }
 
   // Map Elo/Mode -> depth/think/multipv and strength controls
-  mapElo(elo, mode='play'){
-    const E = Math.max(800, Math.min(3000, +elo||2000));
+  mapElo(percent, mode='play'){
+    const pct = Math.max(1, Math.min(100, +percent || 100));
+    const E = 800 + (pct/100)*(3000-800);
     const skill = Math.round((E-800)/110); // 0..20 ~ 800..3000
     const baseDepth = Math.round(6 + (E-800)*(12/2200));  // 6..18
     const depth = Math.max(4, Math.min(22, mode==='analysis' ? baseDepth+2 : baseDepth));
     const movetime = Math.round(150 + (E-800)*(850/2200)) * (mode==='analysis' ? 1.6 : 1); // 150..~1000ms
     const multipv = (mode==='analysis' ? 3 : 1);
-    // limitStrength on under “max Elo”, otherwise full blast
     const limitStrength = E < 3000;
-    return { elo:E, skill, depth, movetime:Math.min(3000, movetime|0), multipv, limitStrength };
+    return { elo:Math.round(E), skill, depth, movetime: movetime|0, multipv, limitStrength };
   }
 
   _applyToSliders(p){
     if (!this.dom) return;
     if (this.dom.depth){ this.dom.depth.value = p.depth; this.dom.depthVal.textContent = String(p.depth); }
-    if (this.dom.think){ this.dom.think.value = p.movetime; this.dom.thinkVal.textContent = String(p.movetime); }
     if (this.dom.multipv){ this.dom.multipv.value = p.multipv; this.dom.multipvVal.textContent = String(p.multipv); }
     if (this.dom.autoSummary){ this.dom.autoSummary.textContent = `→ depth ${p.depth}, think ${p.movetime}ms, MultiPV ${p.multipv}`; }
   }
@@ -76,7 +75,6 @@ export class EngineTuner {
     if (disabled) row.classList.add('disabledish'); else row.classList.remove('disabledish');
     if (this.dom.depth)   this.dom.depth.disabled = disabled;
     if (this.dom.multipv) this.dom.multipv.disabled = disabled;
-    if (this.dom.think)   this.dom.think.disabled = disabled;
   }
 
   _applyToEngine(p){
@@ -99,8 +97,8 @@ export class EngineTuner {
 
   retune(){
     const mode = this.dom.mode?.value || 'play';
-    const elo  = +this.dom.elo?.value || 2000;
-    if (this.dom.eloVal) this.dom.eloVal.textContent = String(elo);
+    const elo  = +this.dom.elo?.value || 100;
+    if (this.dom.eloVal) this.dom.eloVal.textContent = `${elo}%`;
 
     const p = this.mapElo(elo, mode);
 
@@ -110,15 +108,16 @@ export class EngineTuner {
 
     const multipv = auto ? p.multipv : (+this.dom.multipv?.value || p.multipv);
     const depth   = auto ? p.depth   : (+this.dom.depth?.value   || p.depth);
-    const movetime= auto ? p.movetime: (+this.dom.think?.value   || p.movetime);
+    const movetime = p.movetime;
 
     const effective = { ...p, multipv, depth, movetime };
+    this.lastMovetime = movetime;
     this._applyToEngine(effective);
 
     window.dispatchEvent(new CustomEvent('app:tune', {
       detail: {
         mode, auto,
-        elo, threads: this.caps.threads, hashMB: this.caps.hashMB,
+        elo: p.elo, threads: this.caps.threads, hashMB: this.caps.hashMB,
         depth: effective.depth, movetime: effective.movetime, multipv: effective.multipv
       }
     }));
@@ -127,11 +126,10 @@ export class EngineTuner {
   pushManual(){
     if (this.dom.auto?.checked) return; // manual only when auto is off
     const depth = +this.dom.depth?.value || 8;
-    const movetime = +this.dom.think?.value || 300;
     const multipv = +this.dom.multipv?.value || 1;
+    const movetime = this.lastMovetime || 300;
 
     if (this.dom.depthVal) this.dom.depthVal.textContent = String(depth);
-    if (this.dom.thinkVal) this.dom.thinkVal.textContent = String(movetime);
     if (this.dom.multipvVal) this.dom.multipvVal.textContent = String(multipv);
 
     this._applyToEngine({ depth, movetime, multipv, limitStrength:false });
