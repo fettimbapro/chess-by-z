@@ -70,8 +70,10 @@ export class Clock {
   }
 
   renderTo(elWhite, elBlack){
-    elWhite.textContent = `White ${formatTime(this.white)}`;
-    elBlack.textContent = `Black ${formatTime(this.black)}`;
+    elWhite.textContent = formatTime(this.white);
+    elBlack.textContent = formatTime(this.black);
+    elWhite.classList.toggle('active', this.turn === 'w');
+    elBlack.classList.toggle('active', this.turn === 'b');
   }
 }
 
