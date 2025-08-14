@@ -8,6 +8,7 @@ export class Game {
   }
   reset(){ this.ch.reset(); this.redo.length = 0; }
   load(fen){ const ok = this.ch.load(fen); if (ok) this.redo.length = 0; return ok; }
+  loadPgn(pgn){ const ok = this.ch.loadPgn(pgn); if (ok) this.redo.length = 0; return ok; }
   fen(){ return this.ch.fen(); }
   pgn(){ return this.ch.pgn(); }
   turn(){ return this.ch.turn(); }

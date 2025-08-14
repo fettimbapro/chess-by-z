@@ -512,7 +512,8 @@ export class BoardUI {
       if (!sqEl) return;
       const from = sqEl.dataset.square;
       const piece = this.getPieceAt(from);
-      if (!piece) return;
+      const targets = new Set(this.getLegalTargets(from) || []);
+      if (!piece || targets.size === 0) return;
 
       e.preventDefault();
       try{ this.boardEl.setPointerCapture(e.pointerId); }catch{}
@@ -523,7 +524,7 @@ export class BoardUI {
         glyph: BLACK_GLYPH[piece.type], color: piece.color
       };
       this.dragStarted = false;
-      this.dragTargets = new Set(this.getLegalTargets(from) || []);
+      this.dragTargets = targets;
       this.selected = from;
       this.clearSelectionDots();
       this.markSelected(from, this.dragTargets);
@@ -595,6 +596,8 @@ export class BoardUI {
     this.dragStart = null;
     this.dragStarted = false;
 
+    if (from) this.squareEl(from)?.classList?.remove('dragSource');
+
     if (!started){ return; } // click handled in attachClick
 
     const { left, top } = this.boardEl.getBoundingClientRect();
@@ -627,13 +630,20 @@ export class BoardUI {
         return;
       }
 
-      // (Re)select piece, else clear
+      // (Re)select piece only if it has legal moves, else clear
       if (piece){
-        if (this.selected) this.squareEl(this.selected)?.classList?.remove('sel');
-        this.selected = sq;
-        this.dragTargets = new Set(this.getLegalTargets(sq) || []);
-        this.clearSelectionDots();
-        this.markSelected(sq, this.dragTargets);
+        const targets = new Set(this.getLegalTargets(sq) || []);
+        if (targets.size){
+          if (this.selected) this.squareEl(this.selected)?.classList?.remove('sel');
+          this.selected = sq;
+          this.dragTargets = targets;
+          this.clearSelectionDots();
+          this.markSelected(sq, this.dragTargets);
+        } else {
+          if (this.selected) this.squareEl(this.selected)?.classList?.remove('sel');
+          this.clearSelectionDots();
+          this.selected = null;
+        }
       } else {
         if (this.selected) this.squareEl(this.selected)?.classList?.remove('sel');
         this.clearSelectionDots();
