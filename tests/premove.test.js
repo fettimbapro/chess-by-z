@@ -94,3 +94,40 @@ test('queued pre-move can be canceled', async () => {
   assert.equal(canceled, true);
   assert.equal(app.preMove, null);
 });
+
+test('recently queued pre-move survives click from drop', async () => {
+  globalThis.document = {
+    getElementById() { return null; },
+    createElement() { return { setAttribute() {}, appendChild() {}, style: {}, id: '', textContent: '' }; },
+    head: { appendChild() {} }
+  };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  const { BoardUI } = await import('../chess-website-uml/public/src/ui/BoardUI.js');
+  let canceled = false;
+  const boardEl = {
+    _handler: null,
+    addEventListener(type, fn) {
+      if (type === 'click') this._handler = fn;
+    },
+  };
+  const ui = Object.create(BoardUI.prototype);
+  ui.boardEl = boardEl;
+  ui.cancelPreMove = () => { canceled = true; return true; };
+  ui.getPieceAt = () => null;
+  ui.getLegalTargets = () => [];
+  ui.selected = null;
+  ui.dragTargets = new Set();
+  ui.squareEl = () => ({ classList: { add(){}, remove(){} } });
+  ui.clearSelectionDots = () => {};
+  ui.markSelected = () => {};
+  BoardUI.prototype.attachClick.call(ui);
+
+  ui._preJustQueued = performance.now();
+  boardEl._handler({ target: {} });
+  assert.equal(canceled, false);
+
+  await new Promise(r => setTimeout(r, 120));
+  boardEl._handler({ target: { closest(){ return null; } } });
+  assert.equal(canceled, true);
+});
+

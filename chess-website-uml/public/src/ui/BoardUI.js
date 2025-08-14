@@ -225,6 +225,8 @@ export class BoardUI {
     // premove highlight
     this._preFrom = null;
     this._preTo = null;
+    this._preJustQueued = null;
+
 
     // position cache
     this._pos = {};
@@ -643,6 +645,12 @@ export class BoardUI {
   attachClick(){
     // Click-to-move
     this.boardEl.addEventListener('click', (e)=>{
+      const now = performance.now();
+      if (this._preJustQueued && now - this._preJustQueued < 100){
+        this._preJustQueued = null;
+        return;
+      }
+      this._preJustQueued = null;
       if (this.cancelPreMove?.()) return;
       const sqEl = e.target.closest('.sq'); if (!sqEl) return;
       const sq = sqEl.dataset.square;
@@ -703,6 +711,7 @@ export class BoardUI {
     this.clearPreMove();
     this._preFrom = from;
     this._preTo = to;
+    this._preJustQueued = performance.now();
     this.squareEl(from)?.classList?.add('hl-premove-from');
     this.squareEl(to)?.classList?.add('hl-premove-to');
   }
@@ -711,6 +720,7 @@ export class BoardUI {
     if (this._preFrom) this.squareEl(this._preFrom)?.classList?.remove('hl-premove-from');
     if (this._preTo)   this.squareEl(this._preTo)?.classList?.remove('hl-premove-to');
     this._preFrom = this._preTo = null;
+    this._preJustQueued = null;
   }
 
   // ---------- Utils ----------
