@@ -1596,7 +1596,7 @@ function swapColor(color) {
     return color === WHITE ? BLACK : WHITE;
 }
 function validateFen(fen) {
-    // 1st criterion: 6 space-seperated fields?
+    // 1st criterion: 6 space-separated fields?
     const tokens = fen.split(/\s+/);
     if (tokens.length !== 6) {
         return {
@@ -1604,7 +1604,7 @@ function validateFen(fen) {
             error: 'Invalid FEN: must contain six space-delimited fields',
         };
     }
-    // 2nd criterion: move number field is a integer value > 0?
+    // 2nd criterion: move number field is an integer value > 0?
     const moveNumber = parseInt(tokens[5], 10);
     if (isNaN(moveNumber) || moveNumber <= 0) {
         return {
@@ -1624,7 +1624,7 @@ function validateFen(fen) {
     if (!/^(-|[abcdefgh][36])$/.test(tokens[3])) {
         return { ok: false, error: 'Invalid FEN: en-passant square is invalid' };
     }
-    // 5th criterion: 3th field is a valid castle-string?
+    // 5th criterion: 3rd field is a valid castle-string?
     if (/[^kKqQ-]/.test(tokens[2])) {
         return { ok: false, error: 'Invalid FEN: castling availability is invalid' };
     }
@@ -1679,7 +1679,7 @@ function validateFen(fen) {
         (tokens[3][1] == '6' && tokens[1] == 'b')) {
         return { ok: false, error: 'Invalid FEN: illegal en-passant square' };
     }
-    // 10th criterion: does chess position contain exact two kings?
+    // 10th criterion: does chess position contain exactly two kings?
     const kings = [
         { color: 'white', regex: /K/g },
         { color: 'black', regex: /k/g },
