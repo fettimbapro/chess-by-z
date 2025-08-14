@@ -1,6 +1,6 @@
 export default [
   {
-    ignores: ["**/vendor/**", "chess-website-uml/public/src/engine/OpeningBook.js", "chess-website-uml/public/src/engine/openingBook.js"],
+    ignores: ["**/vendor/**", "chess-website-uml/public/src/engine/OpeningBook.js", "chess-website-uml/public/src/engine/openingBookData.js"],
   },
   {
     files: ["**/*.{js,mjs}"],
