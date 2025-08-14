@@ -1,25 +1,38 @@
 # chess-by-z
 
-Fun coding project for an open-source chess website where the processing is
-fully client-side and without any external dependencies, coded in HTML, CSS
-and JavaScript. This is mainly a project testing the functionality and playing
-with the new "gpt-5 thinking" model; all code is written by ChatGPT using a
-Plus subscription.
+An open-source chess website where all processing happens client-side with no external dependencies. The project showcases a pure HTML, CSS, and JavaScript approach and serves as an experiment with code generated via ChatGPT.
 
-## Running locally
+## Overview
+- **Fully client-side**: no backend server required.
+- **Vendor-free**: aside from bundled libraries such as [chess.mjs](chess-website-uml/public/src/vendor/chess.mjs).
+- **Educational**: aimed at experimenting with AI-assisted development and modern browser capabilities.
 
-The client-side code expects certain cross-origin isolation headers. A small
-Python 3 server is bundled to provide these headers. To start the server:
+## Architecture
+Source code lives under `chess-website-uml/public` and is organized into:
+- `src/app` – application bootstrap and high-level controllers
+- `src/ui` – DOM rendering and user interaction helpers
+- `src/vendor` – third-party libraries bundled with the project
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a deeper dive.
+
+## Development
+The client-side code requires specific cross-origin isolation headers. A small Python server is provided to serve the site with the required headers.
 
 ```bash
-cd chess-website-uml/public
-python serve.py
+npm run dev
 ```
 
-This will serve the site at `http://127.0.0.1:8080/`.
+This hosts the site at `http://127.0.0.1:8080/`.
 
-## Bundled dependencies
+## Testing
+Unit tests are written with the built-in Node.js test runner.
 
-The repository includes vendor scripts such as
-[`chess.mjs`](chess-website-uml/public/src/vendor/chess.mjs) for chess
-logic.
+```bash
+npm test
+```
+
+## Contributing
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started and the project's coding standards.
+
+## License
+This project is licensed under the [MIT License](LICENSE).
