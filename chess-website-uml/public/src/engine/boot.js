@@ -20,7 +20,6 @@ function collectDom(){
     // badges
     threadsBadge: $('threadsBadge'),
     hashBadge: $('hashBadge'),
-    sabBadge: $('sabBadge'),
     // misc
     useBook: $('useBook')
   };

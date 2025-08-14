@@ -15,11 +15,7 @@ export function detectCaps() {
   return { sabEnabled, threads, hashMB, cores, deviceMemoryGB: dm };
 }
 
-export function updateBadges({ threadsBadge, hashBadge, sabBadge }, caps) {
+export function updateBadges({ threadsBadge, hashBadge }, caps) {
   if (threadsBadge) threadsBadge.textContent = `Threads: ${caps.threads}`;
   if (hashBadge)    hashBadge.textContent    = `Hash: ${caps.hashMB}MB`;
-  if (sabBadge) {
-    sabBadge.textContent = caps.sabEnabled ? 'SAB: enabled' : 'SAB: disabled (need COOP/COEP)';
-    sabBadge.className = `badge ${caps.sabEnabled ? '' : 'warn'}`;
-  }
 }
