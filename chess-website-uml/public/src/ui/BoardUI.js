@@ -69,13 +69,16 @@ const BLACK_GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
       background: transparent;
     }
 
-    /* Last move & check highlights */
-    .sq.hl-from::after, .sq.hl-to::after, .sq.hl-check::after {
+    /* Last move, check, and premove highlights */
+    .sq.hl-from::after, .sq.hl-to::after, .sq.hl-check::after,
+    .sq.hl-premove-from::after, .sq.hl-premove-to::after {
       content: ''; position: absolute; inset: 2px; border-radius: 6px; pointer-events: none;
     }
-    .sq.hl-from::after { box-shadow: inset 0 0 0 3px rgba(120,170,255,.35), 0 0 12px 4px rgba(120,170,255,.18); }
-    .sq.hl-to::after   { box-shadow: inset 0 0 0 3px rgba(120,170,255,.5),  0 0 14px 6px rgba(120,170,255,.22); }
-    .sq.hl-check::after{ box-shadow: inset 0 0 0 3px rgba(255,70,70,.50),   0 0 18px 10px rgba(255,70,70,.25); }
+    .sq.hl-from::after      { box-shadow: inset 0 0 0 3px rgba(120,170,255,.35), 0 0 12px 4px rgba(120,170,255,.18); }
+    .sq.hl-to::after        { box-shadow: inset 0 0 0 3px rgba(120,170,255,.5),  0 0 14px 6px rgba(120,170,255,.22); }
+    .sq.hl-check::after     { box-shadow: inset 0 0 0 3px rgba(255,70,70,.50),   0 0 18px 10px rgba(255,70,70,.25); }
+    .sq.hl-premove-from::after { box-shadow: inset 0 0 0 3px rgba(200,120,255,.35), 0 0 12px 4px rgba(200,120,255,.18); }
+    .sq.hl-premove-to::after   { box-shadow: inset 0 0 0 3px rgba(200,120,255,.5),  0 0 14px 6px rgba(200,120,255,.22); }
 
     .sq { position: relative; }
     .sq:active { filter: none !important; }
@@ -190,13 +193,14 @@ function findKingSquare(pos, color){
 
 // --------------- BoardUI -----------------
 export class BoardUI {
-  constructor({ boardEl, arrowSvg=null, promoEl=null, onUserMove=null, getPieceAt=null, getLegalTargets=null }){
+  constructor({ boardEl, arrowSvg=null, promoEl=null, onUserMove=null, getPieceAt=null, getLegalTargets=null, cancelPreMove=null }){
     this.boardEl = boardEl;
     this.arrowSvg = arrowSvg || boardEl.querySelector('#arrowSvg') || null;
     this.promoEl = promoEl;
     this.onUserMove = onUserMove || (()=>true);
     this.getPieceAt = getPieceAt || (()=>null);
     this.getLegalTargets = getLegalTargets || (()=>[]);
+    this.cancelPreMove = cancelPreMove || (()=>false);
 
     this.orientation = 'white';
     this.fen = 'startpos';
@@ -217,6 +221,11 @@ export class BoardUI {
     this._lastFrom = null;
     this._lastTo = null;
     this._lastUci = null; // 'e2e4'
+
+    // premove highlight
+    this._preFrom = null;
+    this._preTo = null;
+    this._preJustQueued = null;
 
     // position cache
     this._pos = {};
@@ -635,6 +644,13 @@ export class BoardUI {
   attachClick(){
     // Click-to-move
     this.boardEl.addEventListener('click', (e)=>{
+      const now = performance.now();
+      if (this._preJustQueued && now - this._preJustQueued < 100){
+        this._preJustQueued = null;
+        return;
+      }
+      this._preJustQueued = null;
+      if (this.cancelPreMove?.()) return;
       const sqEl = e.target.closest('.sq'); if (!sqEl) return;
       const sq = sqEl.dataset.square;
       const piece = this.getPieceAt(sq);
@@ -688,6 +704,22 @@ export class BoardUI {
   clearSelectionDots(){
     this.boardEl.querySelectorAll('.sq.sel').forEach(el=>el.classList.remove('sel'));
     this.boardEl.querySelectorAll('.sq .dot').forEach(el=>el.remove());
+  }
+
+  markPreMove(from, to){
+    this.clearPreMove();
+    this._preFrom = from;
+    this._preTo = to;
+    this._preJustQueued = performance.now();
+    this.squareEl(from)?.classList?.add('hl-premove-from');
+    this.squareEl(to)?.classList?.add('hl-premove-to');
+  }
+
+  clearPreMove(){
+    if (this._preFrom) this.squareEl(this._preFrom)?.classList?.remove('hl-premove-from');
+    if (this._preTo)   this.squareEl(this._preTo)?.classList?.remove('hl-premove-to');
+    this._preFrom = this._preTo = null;
+    this._preJustQueued = null;
   }
 
   // ---------- Utils ----------
