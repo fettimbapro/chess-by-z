@@ -16,8 +16,7 @@ export class EngineTuner {
     // Badges
     updateBadges({
       threadsBadge: this.dom.threadsBadge,
-      hashBadge: this.dom.hashBadge,
-      sabBadge: this.dom.sabBadge
+      hashBadge: this.dom.hashBadge
     }, this.caps);
 
     // Wire events
