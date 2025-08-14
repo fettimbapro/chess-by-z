@@ -1,19 +1,16 @@
 // public/src/ui/BoardUI.js
-// BoardUI with highlights, check glow, selection UX, and hardened arrow handling.
-// - Last-move highlights (.hl-from/.hl-to) only when a *real* move happened (both removal+addition).
-//   Skips on initial load and big resets.
-// - In-check glow (.hl-check).
-// - Click-to-move selection + legal move dots; no random darkening.
-// - Arrows: we DO NOT show opponent arrows.
-//   • drawArrowUci(..., true) is ignored (book/engine path).
-//   • setFen() always clears analysis + sys arrows, so nothing sticks.
+// BoardUI with:
+// - Both sides use the *solid (black-piece) glyph shapes* (♚♛♜♝♞♟)
+// - White pieces are white (with thin black outline); black pieces are black (with thin white outline)
+// - Last-move highlights (.hl-from/.hl-to) only on real moves (skip page load / New Game)
+// - In-check glow (.hl-check)
+// - Click-to-move selection + legal dots; drag preserved
+// - Opponent/book primary arrows ignored; all arrows cleared on setFen()
 
 const FILES = ['a','b','c','d','e','f','g','h'];
 
-const GLYPH = {
-  w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
-  b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' }
-};
+// Use the *black* glyph codepoints for BOTH sides (solid shapes)
+const BLACK_GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
 
 // ---------------- CSS injection ----------------
 (function injectStyle(){
@@ -26,13 +23,51 @@ const GLYPH = {
     .sq.hover { outline: 2px dashed rgba(120,160,255,.45); outline-offset: -2px; }
     .sq.dragSource { filter: brightness(1.05); }
 
+    /* Piece glyph (applies to board squares and the drag ghost) */
+    .sq .glyph, .dragPiece.glyph {
+      display: inline-block;
+      line-height: 1;
+      font-size: calc(var(--cell) * 0.82);
+      /* Outline color is provided via --glyph-outline (set by piece color) */
+      -webkit-text-stroke: max(0.6px, calc(var(--cell) * 0.01)) var(--glyph-outline, #000);
+      /* Fallback outline using layered text-shadows (thinner than before) */
+      text-shadow:
+        0  0.6px  var(--glyph-outline, #000),
+        0.6px 0   var(--glyph-outline, #000),
+        0 -0.6px  var(--glyph-outline, #000),
+       -0.6px 0   var(--glyph-outline, #000),
+        0.6px 0.6px var(--glyph-outline, #000),
+        0.6px -0.6px var(--glyph-outline, #000),
+       -0.6px 0.6px var(--glyph-outline, #000),
+       -0.6px -0.6px var(--glyph-outline, #000);
+      pointer-events: none;
+      user-select: none;
+    }
+    /* Inverted outlines + fill color per side */
+    .sq.pw .glyph { color: #fff; }       /* white piece: white fill */
+    .sq.pb .glyph { color: #0b0b0b; }    /* black piece: black fill */
+    .sq.pw { --glyph-outline: #000; }    /* white piece gets black outline */
+    .sq.pb { --glyph-outline: #fff; }    /* black piece gets white outline */
+
+    /* Drag ghost adopts same rules by adding .pw/.pb on the ghost element */
+    .dragPiece.glyph.pw { --glyph-outline: #000; color: #fff; }
+    .dragPiece.glyph.pb { --glyph-outline: #fff; color: #0b0b0b; }
+
     /* Legal move dots */
-    .sq .dot { width: calc(var(--cell, 48px) * .28); height: calc(var(--cell, 48px) * .28);
-      border-radius: 50%; background: radial-gradient(closest-side, rgba(120,160,255,.6), rgba(120,160,255,0));
-      pointer-events: none; }
+    .sq .dot {
+      width: calc(var(--cell, 48px) * .28);
+      height: calc(var(--cell, 48px) * .28);
+      border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(120,160,255,.6), rgba(120,160,255,0));
+      pointer-events: none;
+    }
     .sq.dark .dot { filter: brightness(1.15); }
-    .sq .dot.cap { width: calc(var(--cell, 48px) * .42); height: calc(var(--cell, 48px) * .42);
-      border: 3px solid rgba(120,160,255,.55); background: transparent; }
+    .sq .dot.cap {
+      width: calc(var(--cell, 48px) * .42);
+      height: calc(var(--cell, 48px) * .42);
+      border: 3px solid rgba(120,160,255,.55);
+      background: transparent;
+    }
 
     /* Last move & check highlights */
     .sq.hl-from::after, .sq.hl-to::after, .sq.hl-check::after {
@@ -45,7 +80,7 @@ const GLYPH = {
     .sq { position: relative; }
     .sq:active { filter: none !important; }
 
-    /* Analysis arrows (we’ll clear these on every setFen) */
+    /* Analysis arrows (we clear them on setFen) */
     svg#arrowSvg g.analysis line.arrow { stroke-width: 6; stroke-linecap: round; opacity: .9; }
     svg#arrowSvg g.analysis polygon.head { opacity: .95; }
   `;
@@ -142,15 +177,6 @@ function findKingSquare(pos, color){
 
 // --------------- BoardUI -----------------
 export class BoardUI {
-  /**
-   * @param {object} opts
-   * @param {HTMLElement} opts.boardEl
-   * @param {SVGElement} [opts.arrowSvg]
-   * @param {HTMLElement} [opts.promoEl]
-   * @param {(mv:{from:string,to:string,promotion?:'q'|'r'|'b'|'n'})=>boolean} [opts.onUserMove]
-   * @param {(sq:string)=>({type:'p'|'n'|'b'|'r'|'q'|'k', color:'w'|'b'}|null)} [opts.getPieceAt]
-   * @param {(from:string)=>string[]} [opts.getLegalTargets]
-   */
   constructor({ boardEl, arrowSvg=null, promoEl=null, onUserMove=null, getPieceAt=null, getLegalTargets=null }){
     this.boardEl = boardEl;
     this.arrowSvg = arrowSvg || boardEl.querySelector('#arrowSvg') || null;
@@ -170,10 +196,10 @@ export class BoardUI {
     this.dragGhost = null;
     this.hoverSq = null;
 
-    // last move & arrows
+    // last move
     this._lastFrom = null;
     this._lastTo = null;
-    this._lastUci = null;            // 'e2e4'
+    this._lastUci = null; // 'e2e4'
 
     // position cache
     this._pos = {};
@@ -186,7 +212,7 @@ export class BoardUI {
     this.gSys = null;       // if present (from DrawOverlay)
     this.gAnalysis = null;  // analysis layer we own
 
-    // user drawings (no-op storage)
+    // user drawings (no-ops)
     this._userArrows = [];
     this._userCircles = [];
 
@@ -257,9 +283,7 @@ export class BoardUI {
 
   ensureOverlayGroups(){
     if (!this.arrowSvg) return;
-    // Use existing sys group if provided by DrawOverlay
     this.gSys = this.arrowSvg.querySelector('g.sys-arrows') || null;
-
     let gAna = this.arrowSvg.querySelector('g.analysis');
     if (!gAna){
       gAna = document.createElementNS('http://www.w3.org/2000/svg','g');
@@ -292,15 +316,14 @@ export class BoardUI {
 
     // update pos/turn and re-render
     this._pos = next;
-    this._turn = turn;
+       this._turn = turn;
     this.renderPosition();
 
-    // Always clear arrows on any executed position update (prevents stuck book arrows)
+    // Clear any arrows (prevents stuck book/engine arrows)
     this.clearArrow();
     this.clearSysArrows();
 
-    // Apply highlights only on genuine moves (needs both addition & removal),
-    // and skip entirely on large resets (initial load, New Game).
+    // Diff and highlight only on genuine move; skip on large resets
     const diff = this._diffAddsRems(prev, next);
     const changedCount = diff.changed;
     const hasMove = diff.added.length > 0 && diff.removed.length > 0;
@@ -331,14 +354,21 @@ export class BoardUI {
         const el = squares[idx];
         const piece = pos[sq];
 
-        el.textContent = '';
+        // clear
+        el.innerHTML = '';
         el.classList.remove('pw','pb','sel','cap','hover','dragSource','hl-from','hl-to','hl-check');
         el.removeAttribute('data-piece');
         const dot = el.querySelector?.('.dot'); if (dot) dot.remove();
 
         if (piece){
-          el.textContent = GLYPH[piece.color][piece.type];
-          el.style.fontSize = 'calc(var(--cell) * 0.82)';
+          // Solid glyph for both sides
+          const glyph = BLACK_GLYPH[piece.type];
+          const span = document.createElement('span');
+          span.className = 'glyph';
+          span.textContent = glyph;
+          el.appendChild(span);
+
+          // piece color informs fill + outline via CSS
           el.classList.add(piece.color==='w' ? 'pw' : 'pb');
           el.setAttribute('data-piece', `${piece.color}${piece.type}`);
         }
@@ -409,11 +439,10 @@ export class BoardUI {
     }
   }
 
-  // ---------- Arrow handling ----------
-  // We ignore book/engine arrows entirely (isPrimary=true).
+  // ---------- Arrows ----------
+  // Ignore opponent/book primary arrows entirely.
   drawArrowUci(uci, isPrimary){
-    if (isPrimary) return; // never draw opponent/book primary arrows
-    // (Optional: keep analysis arrows if you use them with isPrimary=false)
+    if (isPrimary) return;
     if (!this.gAnalysis) this.ensureOverlayGroups();
     if (!this.gAnalysis) return;
 
@@ -421,7 +450,6 @@ export class BoardUI {
     const from = u4.slice(0,2), to = u4.slice(2,4);
     const {x:x1,y:y1} = this.squareCenterPx(from);
     const {x:x2,y:y2} = this.squareCenterPx(to);
-
     this._drawAnalysisArrow(x1,y1,x2,y2, /*primary=*/false);
   }
 
@@ -433,7 +461,6 @@ export class BoardUI {
 
   clearSysArrows(){
     if (!this.arrowSvg) return;
-    // wipe anything another module drew into system layer
     const gSys = this.arrowSvg.querySelector('g.sys-arrows');
     if (!gSys) return;
     while (gSys.firstChild) gSys.removeChild(gSys.firstChild);
@@ -490,7 +517,11 @@ export class BoardUI {
       e.preventDefault();
       try{ this.boardEl.setPointerCapture(e.pointerId); }catch{}
 
-      this.dragStart = { x0: e.clientX, y0: e.clientY, from, glyph: GLYPH[piece.color][piece.type], color: piece.color };
+      // Drag ghost uses black glyph too; color/outline set by .pw/.pb class on the ghost
+      this.dragStart = {
+        x0: e.clientX, y0: e.clientY, from,
+        glyph: BLACK_GLYPH[piece.type], color: piece.color
+      };
       this.dragStarted = false;
       this.dragTargets = new Set(this.getLegalTargets(from) || []);
       this.selected = from;
@@ -521,8 +552,8 @@ export class BoardUI {
       this.dragStarted = true;
       if (this.dragGhost){
         this.dragGhost.textContent = this.dragStart.glyph;
+        this.dragGhost.classList.add('glyph', this.dragStart.color==='w' ? 'pw' : 'pb');
         this.dragGhost.style.display = 'flex';
-        this.dragGhost.style.fontSize = 'calc(var(--cell) * 0.82)';
       }
     }
 
@@ -536,6 +567,7 @@ export class BoardUI {
       const { left, top } = this.boardEl.getBoundingClientRect();
       const x = ev.clientX - left, y = ev.clientY - top;
       if (this.dragGhost){
+        this.dragGhost.style.fontSize = `calc(var(--cell) * 0.82)`;
         this.dragGhost.style.transform = `translate(${x - this.cell/2}px, ${y - this.cell/2}px)`;
       }
       const sq = this.squareFromXY(x, y);
@@ -551,6 +583,7 @@ export class BoardUI {
     if (this.dragGhost){
       this.dragGhost.style.display = 'none';
       this.dragGhost.style.transform = 'translate(-9999px,-9999px)';
+      this.dragGhost.classList.remove('pw','pb');
     }
     if (this.hoverSq){
       this.squareEl(this.hoverSq)?.classList?.remove('hover');
