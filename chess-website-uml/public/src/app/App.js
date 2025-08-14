@@ -107,6 +107,7 @@ export class App {
     // Celebration guard (fireworks once per final ply)
     this.lastCelebrationPly = -1;
     this.gameOver = false;
+    this.preMove = null;
 
     // Init
     this.bindControls();
@@ -246,6 +247,7 @@ export class App {
     this.exitReview();
     this.lastCelebrationPly = -1;
     this.gameOver = false;
+    this.preMove = null;
     this.game.reset();
     this.ui.stopCelebration?.();
     this.ui.clearUserArrows?.();
@@ -378,7 +380,10 @@ export class App {
     if (this.inReview || this.gameOver) return false; // safety net
     if (this.modeSel.value === 'play'){
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
-      if (this.game.turn() !== human) return false;
+      if (this.game.turn() !== human){
+        this.preMove = { from, to, promotion: promotion || 'q' };
+        return true;
+      }
     }
     const mv = this.game.move({ from, to, promotion: promotion || 'q' });
     if (!mv) return false;
@@ -390,6 +395,7 @@ export class App {
       this.syncBoard(); this.refreshAll();
       this.maybeCelebrate(); // celebration for puzzle mates as well
       this.checkGameOver();
+      this.applyPreMove();
       return ok;
     }
 
@@ -398,7 +404,16 @@ export class App {
     this.checkGameOver();
     if (this.modeSel.value === 'analysis') this.requestAnalysis();
     else if (this.modeSel.value === 'play') this.maybeEngineMove();
+    this.applyPreMove();
     return true;
+  }
+
+  applyPreMove(){
+    if (!this.preMove) return;
+    const mv = this.preMove;
+    this.preMove = null;
+    this.ui.clearArrow?.();
+    this.onUserMove(mv);
   }
 
   maybeEngineMove(){
@@ -438,6 +453,7 @@ export class App {
           this.syncBoard(); this.refreshAll();
           this.maybeCelebrate();
           this.checkGameOver();
+          this.applyPreMove();
           this.engineStatus.textContent = 'Book move';
           return;
         }
@@ -460,6 +476,7 @@ export class App {
         this.ui.drawArrowUci(uci, true);
         this.maybeCelebrate();
         this.checkGameOver();
+        this.applyPreMove();
       }
       this.engineStatus.textContent = 'Engine: move played';
     }catch(e){
