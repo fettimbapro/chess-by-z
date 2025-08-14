@@ -57,3 +57,40 @@ test('queued pre-move executes after opponent move', async () => {
   assert.equal(app.game.get('e2'), null);
   assert.equal(app.game.turn(), 'b');
 });
+
+test('queued pre-move can be canceled', async () => {
+  globalThis.document = {
+    getElementById() { return null; },
+    createElement() {
+      return { setAttribute() {}, appendChild() {}, style: {}, textContent: '', id: '' };
+    },
+    head: { appendChild() {} },
+    querySelector() { return null; }
+  };
+  globalThis.window = { addEventListener() {}, dispatchEvent() {} };
+  const { App } = await import('../chess-website-uml/public/src/app/App.js');
+  const app = Object.create(App.prototype);
+  app.game = new Game();
+  app.modeSel = { value: 'play' };
+  app.sideSel = { value: 'white' };
+  app.inReview = false;
+  app.gameOver = false;
+  app.preMove = null;
+  app.clock = { onMoveApplied() {}, turn: 'w', white: 0, black: 0, inc: 0 };
+  app.clockPanel = { startIfNotRunning() {} };
+  app.ui = { clearArrow() {} };
+  app.onUserMove = App.prototype.onUserMove.bind(app);
+  app.cancelPreMove = App.prototype.cancelPreMove.bind(app);
+  app.getPieceAt = App.prototype.getPieceAt.bind(app);
+  app.getLegalTargets = App.prototype.getLegalTargets.bind(app);
+
+  app.game.load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1');
+
+  const ok = app.onUserMove({ from: 'e2', to: 'e4' });
+  assert.equal(ok, true);
+  assert.notEqual(app.preMove, null);
+
+  const canceled = app.cancelPreMove();
+  assert.equal(canceled, true);
+  assert.equal(app.preMove, null);
+});
