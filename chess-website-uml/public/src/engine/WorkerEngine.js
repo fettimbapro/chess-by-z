@@ -1,14 +1,17 @@
 import { Engine } from "./Engine.js";
 import { allocateMoveTime, estimateComplexity } from "./TimeManager.js";
 
-// Uses our JS mini-engine in a Module Worker
+// Uses a JS engine in a Module Worker. Variant can be "classic" or "strong".
 export class WorkerEngine extends Engine {
-  constructor() {
+  constructor({ variant = "classic" } = {}) {
     super();
-    this.worker = new Worker(
-      new URL("../workers/mini-engine.js", import.meta.url),
-      { type: "module" }, // IMPORTANT: module worker
-    );
+    const script =
+      variant === "strong"
+        ? "../workers/strong-engine.js"
+        : "../workers/mini-engine.js";
+    this.worker = new Worker(new URL(script, import.meta.url), {
+      type: "module",
+    });
     this.req = 0;
     this.waiting = new Map();
     this.worker.onmessage = (e) => {
