@@ -32,8 +32,15 @@ test('queued pre-move executes after opponent move', async () => {
   app.maybeEngineMove = () => {};
   app.applyPreMove = App.prototype.applyPreMove.bind(app);
   app.onUserMove = App.prototype.onUserMove.bind(app);
+  app.getPieceAt = App.prototype.getPieceAt.bind(app);
+  app.getLegalTargets = App.prototype.getLegalTargets.bind(app);
 
   app.game.load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1');
+
+  const startPiece = app.getPieceAt('e2');
+  assert.equal(startPiece?.type, 'p');
+  const targets = app.getLegalTargets('e2').sort();
+  assert.deepEqual(targets, ['e3', 'e4']);
 
   const ok = app.onUserMove({ from: 'e2', to: 'e4' });
   assert.equal(ok, true);
