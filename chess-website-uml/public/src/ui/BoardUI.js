@@ -367,7 +367,9 @@ export class BoardUI {
     let idx = 0;
     for (let rank=8; rank>=1; rank--){
       for (let file=0; file<8; file++, idx++){
-        const sq = `${FILES[file]}${rank}`;
+        const sq = (this.orientation === 'white')
+          ? `${FILES[file]}${rank}`
+          : `${FILES[7 - file]}${9 - rank}`;
         const el = squares[idx];
         const piece = pos[sq];
 
