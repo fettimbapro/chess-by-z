@@ -217,14 +217,13 @@
             <option value="puzzle">Puzzles</option>
           </select>
 
-          <label for="side">Your side</label>
-          <select id="side">
+          <label for="side" style="display:none">Your side</label>
+          <select id="side" style="display:none">
             <option value="white">White</option>
             <option value="black">Black</option>
           </select>
 
-          <button id="flip">Flip</button>
-          <button id="newGame">New Game</button>
+          <button id="switchSide" class="switch-btn">Switch to black and restart</button>
           <span class="badge" id="sabBadge" title="SharedArrayBuffer status"></span>
         </div>
 
