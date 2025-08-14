@@ -227,26 +227,6 @@
           <span class="badge" id="sabBadge" title="SharedArrayBuffer status"></span>
         </div>
 
-        <div class="row" id="knobsRow">
-          <label class="muted">Elo</label>
-          <input type="range" id="elo" min="1" max="100" step="1" value="100" />
-          <span id="eloVal">100%</span>
-
-          <label class="muted">Depth</label>
-          <input type="range" id="depth" min="2" max="22" step="1" value="22" />
-          <span id="depthVal">22</span>
-
-          <label class="muted">MultiPV</label>
-          <input type="range" id="multipv" min="1" max="4" step="1" value="1" />
-          <span id="multipvVal">1</span>
-        </div>
-
-        <div class="row">
-          <label class="muted">Opening book (offline)</label>
-          <input type="checkbox" id="useBook" checked />
-          <span class="muted">• Play mode only, first ~10 plies</span>
-        </div>
-
         <div class="row">
           <button class="button" id="analyzeBtn">Analyze</button>
           <button class="button" id="hintBtn">Hint</button>
@@ -261,16 +241,36 @@
           <div id="engineStatus" class="muted">Engine: ready</div>
         </div>
 
-        <hr />
+        <details id="advancedControls">
+          <summary>Advanced</summary>
+          <div class="row" id="knobsRow">
+            <label class="muted">Elo</label>
+            <input type="range" id="elo" min="1" max="100" step="1" value="100" />
+            <span id="eloVal">100%</span>
 
-        <!-- Clock settings -->
-        <div class="row">
-          <label>Clock</label>
-          <input type="number" id="timeMin" value="5" min="1" max="180" />
-          <span class="muted">min</span>
-          <input type="number" id="incSec" value="3" min="0" max="60" />
-          <span class="muted">+ sec</span>
-        </div>
+            <label class="muted">Depth</label>
+            <input type="range" id="depth" min="2" max="22" step="1" value="22" />
+            <span id="depthVal">22</span>
+
+            <label class="muted">MultiPV</label>
+            <input type="range" id="multipv" min="1" max="4" step="1" value="1" />
+            <span id="multipvVal">1</span>
+          </div>
+
+          <div class="row">
+            <label class="muted">Opening book (offline)</label>
+            <input type="checkbox" id="useBook" checked />
+            <span class="muted">• Play mode only, first ~10 plies</span>
+          </div>
+
+          <div class="row">
+            <label>Clock</label>
+            <input type="number" id="timeMin" value="5" min="1" max="180" />
+            <span class="muted">min</span>
+            <input type="number" id="incSec" value="3" min="0" max="60" />
+            <span class="muted">+ sec</span>
+          </div>
+        </details>
       </div>
 
       <!-- Optional: Game/PGN helpers -->
