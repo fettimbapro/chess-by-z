@@ -5,12 +5,13 @@ import { adaptLichessPuzzle } from './PuzzleModel.js';
 function on(el, type, fn){ if (el) el.addEventListener(type, fn); }
 
 export class PuzzleUI {
-  constructor({ game, ui, service, dom, onStateChanged }){
+  constructor({ game, ui, service, dom, onStateChanged, onMove }) {
     this.game = game;
     this.ui = ui;
     this.svc = service;
     this.dom = dom || {};
     this.onStateChanged = onStateChanged || (()=>{});
+    this.onMove = onMove || (()=>{});
 
     this.current = null;
     this.index = 0;
@@ -146,7 +147,8 @@ export class PuzzleUI {
         const tmp2 = new Chess(this.game.fen());
         const rm = tmp2.move(reply);
         if (rm){
-          this.game.moveSan(reply);
+          const applied = this.game.moveSan(reply);
+          this.onMove(applied);
           this.index++;
           this.onStateChanged();
           if (this.dom?.puzzleStatus) this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">Your move…</span>`;
