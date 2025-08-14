@@ -27,7 +27,12 @@
 
     header{display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:12px}
     header h1{margin:4px 0 0 0; font-weight:800; letter-spacing:.2px; text-align:center}
-    header .subtitle{font-size:13px; color:var(--muted); margin-bottom:4px; text-align:center}
+
+    footer.site-footer{
+      margin-top:40px; padding-top:8px; border-top:1px solid #222a36;
+      text-align:center; font-size:13px; color:var(--muted);
+    }
+    footer.site-footer a{color:var(--accent)}
 
     /* Board section first; controls below (single column) */
     .stack{display:flex; flex-direction:column; gap:14px}
@@ -176,7 +181,6 @@
   <div class="page">
     <header>
       <h1>Chess by Sam</h1>
-      <div class="subtitle">Fully offline • No dependencies • Client-side engine</div>
     </header>
 
     <div class="stack">
@@ -326,6 +330,9 @@
         <div class="status" id="puzzleStatus"></div>
       </div>
     </div>
+    <footer class="site-footer">
+      <p>Fully offline · No dependencies · Client-side engine · <a href="https://github.com/samzlotnik/chess-by-z">Open source</a>. Contact: <a href="mailto:itsjustme@samzlotnik.se">itsjustme@samzlotnik.se</a></p>
+    </footer>
   </div>
 
   <!-- App entry + engine boot (leave these as-is for your current project) -->
