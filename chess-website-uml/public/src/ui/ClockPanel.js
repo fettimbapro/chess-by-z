@@ -7,15 +7,6 @@ export class ClockPanel {
     // initial values
     this.applyInputs();
 
-    // bind buttons
-    els.start.addEventListener('click', () => {
-      this.clock.setTurn(els.turnSupplier()); // ensure sync before start
-      this.clock.start();
-      this.render();
-    });
-    els.pause.addEventListener('click', () => this.clock.pause());
-    els.reset.addEventListener('click', () => { this.applyInputs(); this.render(); });
-
     // inputs
     els.timeMin.addEventListener('change', () => { this.applyInputs(); this.render(); });
     els.incSec.addEventListener('change', () => { this.applyInputs(); this.render(); });
