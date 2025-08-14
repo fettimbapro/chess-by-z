@@ -105,9 +105,35 @@
     .promo .opt{width:56px; height:56px; background:#141a25; border:1px solid #1c2533; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:28px}
 
     /* Cards */
-    .card{background:var(--layer); border:1px solid #222a36; border-radius:12px; padding:10px}
-    .row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0}
+    .card{
+      background:var(--layer);
+      border:1px solid #222a36;
+      border-radius:12px;
+      padding:14px;
+      width:var(--content-w);
+      max-width:660px;
+      margin-inline:auto;
+      box-shadow:0 4px 12px rgba(0,0,0,.35);
+      backdrop-filter:blur(6px);
+    }
+    @media (min-width: 980px){
+      .card{ width:40vw; max-width:none; }
+    }
+    .row{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:8px 0}
     .row label{min-width:80px}
+
+    /* Form controls */
+    select,
+    input[type="text"],
+    input[type="number"],
+    input[type="file"]{
+      background:#1b2432;
+      border:1px solid #2a3443;
+      border-radius:8px;
+      padding:6px 8px;
+      color:var(--text);
+    }
+    input::placeholder{color:var(--muted)}
 
     .pv{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:13px}
     .status{margin-top:6px; min-height:24px}
@@ -134,14 +160,15 @@
       background:var(--accent);
       color:var(--bg);
       border:none;
-      border-radius:6px;
-      padding:4px 10px;
+      border-radius:8px;
+      padding:6px 12px;
       font-weight:600;
       cursor:pointer;
-      transition:background .2s, transform .1s;
+      box-shadow:0 2px 4px rgba(0,0,0,.25);
+      transition:background .2s, transform .1s, box-shadow .2s;
     }
     button:hover{ background:#5b97f0; }
-    button:active{ transform:translateY(1px); }
+    button:active{ transform:scale(.97); box-shadow:0 1px 2px rgba(0,0,0,.25); }
 
     /* Game info text styling */
     .tip-moves{
