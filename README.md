@@ -2,3 +2,11 @@
 for fun coding project for an open source chess website where the processing is fully client-side and without any external dependencies, coded in html, css &amp; js
 
 this is mainly a project testing the functionality and playing with the new "gpt-5 thinking"-model, all code is written by chatgpt using a plus subscription.
+
+## Running tests
+
+Run the test suite with Node's built-in test runner:
+
+```sh
+node --test
+```

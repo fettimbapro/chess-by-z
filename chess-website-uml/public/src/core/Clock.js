@@ -51,10 +51,20 @@ export class Clock {
     if (!this.ticking) return;
     if (this.turn==='w'){
       this.white -= 100;
-      if (this.white <= 0){ this.white = 0; this.ticking = false; this.onFlag && this.onFlag('w'); }
+      if (this.white <= 0){
+        this.white = 0;
+        this.ticking = false;
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        this.onFlag && this.onFlag('w');
+      }
     } else {
       this.black -= 100;
-      if (this.black <= 0){ this.black = 0; this.ticking = false; this.onFlag && this.onFlag('b'); }
+      if (this.black <= 0){
+        this.black = 0;
+        this.ticking = false;
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        this.onFlag && this.onFlag('b');
+      }
     }
     this.onTick && this.onTick();
   }
