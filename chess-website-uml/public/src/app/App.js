@@ -7,6 +7,7 @@ import { PuzzleUI } from '../puzzles/PuzzleUI.js';
 import { ClockPanel } from '../ui/ClockPanel.js';
 import { detectOpening } from '../engine/Openings.js';
 import { Sounds } from '../util/Sounds.js';
+import { Chess } from '../vendor/chess.mjs';
 
 const qs = (s) => document.querySelector(s);
 
@@ -363,7 +364,28 @@ export class App {
     if (this.modeSel.value === 'play'){
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
       if (!p || p.color !== human) return [];
-      return this.game.legalMovesFrom(sq, human);
+      const moves = new Set(this.game.legalMovesFrom(sq, human));
+      // Allow premoves that capture one's own piece by treating that
+      // piece as if it were removed. Only relevant when it's not the
+      // human's turn.
+      if (this.game.turn() !== human){
+        // Base FEN, but set turn to the human side so move generation works
+        const baseFenParts = this.game.fen().split(' ');
+        baseFenParts[1] = human;
+        const baseFen = baseFenParts.join(' ');
+        // Iterate over all friendly pieces on the board (except the moving one)
+        for (const row of this.game.ch.board()){
+          for (const piece of row){
+            if (piece && piece.color === human && piece.square !== sq){
+              const temp = new Chess(baseFen);
+              temp.remove(piece.square);
+              const mvs = temp.moves({ square: sq, verbose: true }).map(m=>m.to);
+              if (mvs.includes(piece.square)) moves.add(piece.square);
+            }
+          }
+        }
+      }
+      return Array.from(moves);
     }
     const turn = this.game.turn();
     if (!p || p.color !== turn) return [];
