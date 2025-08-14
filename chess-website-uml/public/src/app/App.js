@@ -363,6 +363,9 @@ export class App {
     if (this.modeSel.value === 'play'){
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
       if (!p || p.color !== human) return [];
+      if (this.game.turn() !== human){
+        return this.game.premoveLegalMovesFrom(sq, human);
+      }
       return this.game.legalMovesFrom(sq, human);
     }
     const turn = this.game.turn();
