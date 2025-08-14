@@ -2,7 +2,7 @@
 // Compact offline opening book containing only named openings.
 // Keys are SAN sequences joined by spaces; values are arrays of [SAN, weight].
 
-import BOOK from './openingBook.json' assert { type: 'json' };
+import BOOK from './openingBook.js';
 
 function pickWeighted(list){
   const total = list.reduce((a,[,w])=>a+w,0);
