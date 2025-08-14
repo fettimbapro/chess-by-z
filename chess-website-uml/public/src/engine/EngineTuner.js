@@ -65,7 +65,6 @@ export class EngineTuner {
     if (!this.dom) return;
     if (this.dom.depth){ this.dom.depth.value = p.depth; this.dom.depthVal.textContent = String(p.depth); }
     if (this.dom.multipv){ this.dom.multipv.value = p.multipv; this.dom.multipvVal.textContent = String(p.multipv); }
-    if (this.dom.autoSummary){ this.dom.autoSummary.textContent = `→ depth ${p.depth}, think ${p.movetime}ms, MultiPV ${p.multipv}`; }
   }
 
   _setKnobsEnabled(disabled){
@@ -103,7 +102,7 @@ export class EngineTuner {
 
     const auto = !!this.dom.auto?.checked;
     if (auto){ this._applyToSliders(p); this._setKnobsEnabled(true); }
-    else { if (this.dom.autoSummary) this.dom.autoSummary.textContent = ''; this._setKnobsEnabled(false); }
+    else { this._setKnobsEnabled(false); }
 
     const multipv = auto ? p.multipv : (+this.dom.multipv?.value || p.multipv);
     const depth   = auto ? p.depth   : (+this.dom.depth?.value   || p.depth);
