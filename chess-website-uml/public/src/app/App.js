@@ -10,12 +10,13 @@ import { Sounds } from '../util/Sounds.js';
 
 const qs = (s) => document.querySelector(s);
 
-class App {
+export class App {
   constructor() {
     window.app = this;
 
     // DOM
     this.boardEl = qs('#board');
+    this.boardArea = qs('.board-area');
     this.arrowSvg = qs('#arrowSvg');
     this.evalbar = qs('#evalbar');
     this.evalWhite = qs('#evalWhite');
@@ -76,7 +77,7 @@ class App {
       getPieceAt: this.getPieceAt.bind(this),
       getLegalTargets: this.getLegalTargets.bind(this)
     });
-    this.ui.setOrientation(this.sideSel.value);
+    this.applyOrientation();
     this.updateSwitchButtonText();
 
     // Puzzles
@@ -169,7 +170,7 @@ class App {
     });
 
     this.sideSel.addEventListener('change', () => {
-      this.ui.setOrientation(this.sideSel.value);
+      this.applyOrientation();
       this.refreshAll();
       this.maybeEngineMove();
       this.updateSwitchButtonText();
@@ -181,7 +182,7 @@ class App {
         this.confirmRestart = false;
         this.switchBtn.classList.remove('confirm');
         this.sideSel.value = (this.sideSel.value === 'white') ? 'black' : 'white';
-        this.ui.setOrientation(this.sideSel.value);
+        this.applyOrientation();
         this.startNewGame();
         this.updateSwitchButtonText();
       } else {
@@ -233,6 +234,12 @@ class App {
         this.engineStatus.textContent = 'Invalid FEN';
       }
     });
+  }
+
+  applyOrientation(){
+    const side = this.sideSel.value;
+    this.ui.setOrientation(side);
+    this.boardArea.classList.toggle('flipped', side === 'black');
   }
 
   startNewGame(){
@@ -511,7 +518,7 @@ class App {
   }
 
   syncBoard(){
-    this.ui.setOrientation(this.sideSel.value);
+    this.applyOrientation();
     this.ui.setFen(this.getActiveFen());
     const ply = this.inReview ? this.reviewPly : this.getSanHistory().length;
     const inst = window.DrawOverlayInstance;
