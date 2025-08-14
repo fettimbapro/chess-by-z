@@ -34,7 +34,6 @@ class App {
     this.elo = qs('#elo'); this.eloVal = qs('#eloVal');
     this.depth = qs('#depth'); this.depthVal = qs('#depthVal');
     this.multipv = qs('#multipv'); this.multipvVal = qs('#multipvVal');
-    this.think = qs('#think'); this.thinkVal = qs('#thinkVal');
 
     // Clock UI elements
     const clockEls = {
@@ -57,6 +56,7 @@ class App {
     this.clockPanel = new ClockPanel({ clock: this.clock, els: clockEls });
     this.clock.onFlag = (side) => {
       this.engine.stop?.();
+      this.gameOver = true;
       this.engineStatus.textContent = (side === 'w') ? 'White flagged.' : 'Black flagged.';
     };
     this.clockPanel.render();
@@ -101,6 +101,7 @@ class App {
 
     // Celebration guard (fireworks once per final ply)
     this.lastCelebrationPly = -1;
+    this.gameOver = false;
 
     // Init
     this.bindControls();
@@ -155,7 +156,6 @@ class App {
     link(this.elo, this.eloVal, () => this.updateEloDisplay?.());
     link(this.depth, this.depthVal, () => this.updateEloDisplay?.());
     link(this.multipv, this.multipvVal, () => this.updateEloDisplay?.());
-    link(this.think, this.thinkVal, () => this.updateEloDisplay?.());
 
     this.modeSel.addEventListener('change', () => {
       const m = this.modeSel.value;
@@ -176,6 +176,7 @@ class App {
     this.newGameBtn.addEventListener('click', () => {
       this.exitReview(); // ensure back to live
       this.lastCelebrationPly = -1;
+      this.gameOver = false;
       this.game.reset();
       this.ui.stopCelebration?.();
       this.ui.clearUserArrows?.();
@@ -314,7 +315,7 @@ class App {
   }
 
   onUserMove({ from, to, promotion }) {
-    if (this.inReview) return false; // safety net
+    if (this.inReview || this.gameOver) return false; // safety net
     const mv = this.game.move({ from, to, promotion: promotion || 'q' });
     if (!mv) return false;
 
@@ -323,11 +324,13 @@ class App {
       const ok = this.puzzles.handleUserMove(mv);
       this.syncBoard(); this.refreshAll();
       this.maybeCelebrate(); // celebration for puzzle mates as well
+      this.checkGameOver();
       return ok;
     }
 
     this.syncBoard(); this.refreshAll();
     this.maybeCelebrate();
+    this.checkGameOver();
     if (this.modeSel.value === 'analysis') this.requestAnalysis();
     else if (this.modeSel.value === 'play') this.maybeEngineMove();
     return true;
@@ -335,7 +338,7 @@ class App {
 
   maybeEngineMove(){
     if (this.modeSel.value !== 'play') return;
-    if (this.inReview) return; // don't move engine while browsing history
+    if (this.inReview || this.gameOver) return; // don't move engine while browsing history
     const humanIs = (this.sideSel.value === 'white') ? 'w' : 'b';
     if (this.game.turn() !== humanIs) this.requestBestMove();
   }
@@ -355,7 +358,7 @@ class App {
 
   async requestBestMove(){
     try{
-      if (this.inReview) return; // safety
+      if (this.inReview || this.gameOver) return; // safety
       this.engineStatus.textContent = 'Engine thinking...';
 
       // 1) Try the opening book first
@@ -368,16 +371,20 @@ class App {
           if (last?.from && last?.to) this.ui.drawArrowUci(last.from + last.to + (last.promotion||''), true);
           this.syncBoard(); this.refreshAll();
           this.maybeCelebrate();
+          this.checkGameOver();
           this.engineStatus.textContent = 'Book move';
           return;
         }
       }
 
       // 2) Fall back to the engine
+      const eloPct = parseInt(this.elo.value,10);
+      const mapped = window.engineTuner?.mapElo ? window.engineTuner.mapElo(eloPct) : { elo: 3000 };
       const uci = await this.engine.play(this.game.fen(), {
-        elo: parseInt(this.elo.value,10),
+        elo: mapped.elo,
         depthCap: parseInt(this.depth.value,10),
-        timeMs: parseInt(this.think.value,10)
+        timeLeftMs: (this.clock.turn === 'w') ? this.clock.white : this.clock.black,
+        incrementMs: this.clock.inc
       });
       if (uci) {
         this.game.moveUci(uci);
@@ -385,6 +392,7 @@ class App {
         this.syncBoard(); this.refreshAll();
         this.ui.drawArrowUci(uci, true);
         this.maybeCelebrate();
+        this.checkGameOver();
       }
       this.engineStatus.textContent = 'Engine: move played';
     }catch(e){
@@ -395,12 +403,12 @@ class App {
 
   async requestAnalysis(){
     try{
-      if (this.inReview) return; // keep analysis tied to current position only
+      if (this.inReview || this.gameOver) return; // keep analysis tied to current position only
       this.engineStatus.textContent = 'Analyzing...';
       const lines = await this.engine.analyze(this.game.fen(), {
         depth: parseInt(this.depth.value,10),
         multipv: parseInt(this.multipv.value,10),
-        timeMs: parseInt(this.think.value,10)
+        timeMs: window.engineTuner?.lastMovetime || 300
       });
       this.ui.clearArrow?.();
       (lines||[]).forEach((l,i)=> { if (l.firstUci) this.ui.drawArrowUci(l.firstUci, i===0); });
@@ -418,12 +426,12 @@ class App {
 
   async requestHint(){
     try{
-      if (this.inReview) return;
+      if (this.inReview || this.gameOver) return;
       this.engineStatus.textContent = 'Hint...';
       const lines = await this.engine.analyze(this.game.fen(), {
         depth: Math.max(2, parseInt(this.depth.value,10)),
         multipv: 1,
-        timeMs: parseInt(this.think.value,10)
+        timeMs: window.engineTuner?.lastMovetime || 300
       });
       if (lines && lines[0]?.firstUci) this.ui.drawArrowUci(lines[0].firstUci);
       if (lines && lines[0]) this.updateEvalFromCp(lines[0].scoreCp);
@@ -461,13 +469,14 @@ class App {
   updateEloDisplay(){
     if (!this.elo || !this.eloVal) return;
 
-    const engineElo = parseInt(this.elo.value, 10) || 0;
+    const percent = parseInt(this.elo.value, 10) || 0;
+    const engineElo = Math.round(800 + (percent/100)*(3000-800));
     const depthCap = parseInt(this.depth?.value || '0', 10) || 0;
-    const thinkMs  = parseInt(this.think?.value || '0', 10) || 0;
+    const thinkMs  = window.engineTuner?.lastMovetime || 0;
 
     const est = estimateUiElo(engineElo, depthCap, thinkMs);
 
-    this.eloVal.textContent = `≈ ${est}`;
+    this.eloVal.textContent = `${percent}%`;
     this.eloVal.title = `Engine param: ${engineElo}`;
 
     const autoSummary = qs('#autoSummary');
@@ -568,6 +577,18 @@ class App {
       num++;
     }
     return out.join(' ');
+  }
+
+  checkGameOver(){
+    const g = this.game?.ch;
+    if (g && ((typeof g.isGameOver === 'function' && g.isGameOver()) || (typeof g.game_over === 'function' && g.game_over()))){
+      this.gameOver = true;
+      this.clock.pause();
+      this.clockPanel.render?.();
+      this.engine.stop?.();
+      return true;
+    }
+    return false;
   }
 
   // === Mate detection & celebration ===
