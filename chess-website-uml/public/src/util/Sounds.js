@@ -11,10 +11,20 @@ export class Sounds {
       // slight variation each play
       const detune = 1 + (Math.random() - 0.5) * 0.1; // ±5%
 
+      const profiles = {
+        move: { filter: 1500, osc: 200, dur: 0.2 },
+        capture: { filter: 1000, osc: 160, dur: 0.2 },
+        check: { filter: 1700, osc: 400, dur: 0.25 },
+        checkmate: { filter: 1800, osc: 600, dur: 0.3 },
+        airhorn: { filter: 800, osc: 150, dur: 1.2, gain: 0.25, type: 'square' }
+      };
+      const p = profiles[name] || profiles.move;
+
       const gain = ctx.createGain();
+      const maxGain = p.gain ?? 0.09;
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.09, now + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      gain.gain.linearRampToValueAtTime(maxGain, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + p.dur);
 
       // soft noise burst to mimic cushioned piece drop
       const noise = ctx.createBufferSource();
@@ -25,14 +35,6 @@ export class Sounds {
       }
       noise.buffer = buffer;
 
-      const profiles = {
-        move: { filter: 1500, osc: 200, dur: 0.2 },
-        capture: { filter: 1000, osc: 160, dur: 0.2 },
-        check: { filter: 1700, osc: 400, dur: 0.25 },
-        checkmate: { filter: 1800, osc: 600, dur: 0.3 }
-      };
-      const p = profiles[name] || profiles.move;
-
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = p.filter * detune;
@@ -40,9 +42,9 @@ export class Sounds {
       noise.connect(filter);
       filter.connect(gain);
 
-      // subtle tone
+      // subtle tone or horn
       const osc = ctx.createOscillator();
-      osc.type = 'sine';
+      osc.type = p.type || 'sine';
       osc.frequency.value = p.osc * detune;
       osc.connect(gain);
 
