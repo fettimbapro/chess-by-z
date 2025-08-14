@@ -43,13 +43,17 @@ function moveKey(m){ return m.from + m.to + (m.promotion||'') + m.piece; }
 function addHistory(m, d){ if (isCapture(m)) return; const k=moveKey(m); history.set(k, (history.get(k)||0) + d*d); }
 function pushKiller(uci, ply){ killers[ply] = killers[ply]||[]; if (killers[ply][0]!==uci){ killers[ply][1]=killers[ply][0]; killers[ply][0]=uci; } }
 
-function orderMoves(list, ttUci, ply){
+function orderMoves(list, ttUci, ply, ch){
   const ks = killers[ply] || [];
   return list.map(m=>{
     let s = 0, u = toUci(m);
     if (ttUci && u===ttUci) s += 1e9;               // hash move first
     if (isCapture(m)) s += 5e8 + mvvLva(m);         // captures (MVV-LVA)
     if (isPromotion(m)) s += 4.5e8;
+    // bonus for moves that give check to improve move ordering
+    ch.move(m);
+    if (inCheck(ch)) s += 2e8;
+    ch.undo();
     if (ks[0]===u) s += 4e8;
     if (ks[1]===u) s += 3e8;
     s += (history.get(moveKey(m))||0);
@@ -68,6 +72,7 @@ function evalBoard(ch){
   const wFiles = Array(8).fill(0), bFiles = Array(8).fill(0);
   const wPawnRanks = Array.from({length:8}, ()=>[]);
   const bPawnRanks = Array.from({length:8}, ()=>[]);
+  const wRooks = [], bRooks = [];
   let wKing = null, bKing = null;
 
   for (let r=0;r<8;r++){
@@ -100,8 +105,9 @@ function evalBoard(ch){
         // rook on 7th
         const seventh = (color==='w') ? (rankW===7) : (rankW===2);
         if (seventh) mg += sign * 18;
+        if (color==='w') wRooks.push(f); else bRooks.push(f);
       } else if (type === 'k'){
-        if (color==='w') wKing = {f, r:rankW}; else bKing = {f, r:rankW};
+        if (color==='w') wKing = {f, r}; else bKing = {f, r};
       } else if (type === 'p'){
         // track pawns for structure
         if (color==='w'){ wFiles[f]++; wPawnRanks[f].push(rankW); }
@@ -130,6 +136,20 @@ function evalBoard(ch){
     if (bFiles[f]){
       const neigh = (f>0?bFiles[f-1]:0) + (f<7?bFiles[f+1]:0);
       if (!neigh){ mg += 10 * bFiles[f]; eg += 6 * bFiles[f]; }
+    }
+  }
+
+  // rooks on open and semi-open files
+  for (const f of wRooks){
+    if (wFiles[f] === 0){
+      if (bFiles[f] === 0){ mg += 20; eg += 10; } // open file
+      else { mg += 10; eg += 5; }                 // semi-open
+    }
+  }
+  for (const f of bRooks){
+    if (bFiles[f] === 0){
+      if (wFiles[f] === 0){ mg -= 20; eg -= 10; }
+      else { mg -= 10; eg -= 5; }
     }
   }
 
@@ -189,6 +209,15 @@ function evalBoard(ch){
   }
   if (wKing) mg -= exposure(wFiles, wKing.f) * 10;
   if (bKing) mg += exposure(bFiles, bKing.f) * 10;
+
+  // king activity in endgame – encourage centralisation
+  function kingEgCenter(k){
+    if (!k) return 0;
+    const d = manhattan(k.f, k.r);
+    return Math.max(0, 14 - Math.round(d * 4));
+  }
+  eg += kingEgCenter(wKing);
+  eg -= kingEgCenter(bKing);
 
   // tempo
   if (ch.turn()==='w'){ mg += 10; eg += 5; } else { mg -= 10; eg -= 5; }
@@ -322,7 +351,7 @@ function search(ch, depth, alpha, beta, ply){
   }
 
   let ttMove = tte?.best || null;
-  let legal = orderMoves(legal0, ttMove, ply);
+  let legal = orderMoves(legal0, ttMove, ply, ch);
 
   let origAlpha = alpha, bestScore = -INF, bestUci = null, bestPv = [];
   let first = true;
