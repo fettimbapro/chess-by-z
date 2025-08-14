@@ -375,8 +375,8 @@ export class App {
   }
 
   playMoveSound(mv){
-    if (this.isMateNow()) this.sounds.play('checkmate');
-    else if (this.isCheckNow()) this.sounds.play('check');
+    if (this.isMateNow()) return; // celebration handles the sound
+    if (this.isCheckNow()) this.sounds.play('check');
     else this.sounds.play(mv?.captured ? 'capture' : 'move');
   }
 
@@ -676,7 +676,23 @@ export class App {
     const ply = this.getSanHistory().length;
     if (this.isMateNow() && this.lastCelebrationPly !== ply){
       this.lastCelebrationPly = ply;
-      this.ui.celebrate?.();
+      let kingSq = null;
+      try {
+        const turn = this.game.turn();
+        const board = this.game.ch.board();
+        const files = 'abcdefgh';
+        outer: for (let r = 0; r < 8; r++) {
+          for (let f = 0; f < 8; f++) {
+            const piece = board[r][f];
+            if (piece && piece.type === 'k' && piece.color === turn) {
+              kingSq = files[f] + (8 - r);
+              break outer;
+            }
+          }
+        }
+      } catch {}
+      this.sounds.play('airhorn');
+      this.ui.celebrate?.(kingSq);
     }
   }
 }

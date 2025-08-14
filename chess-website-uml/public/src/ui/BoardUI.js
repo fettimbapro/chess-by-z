@@ -91,13 +91,13 @@ const BLACK_GLYPH = { k:'♚', q:'♛', r:'♜', b:'♝', n:'♞', p:'♟' };
     .confetti-root { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:5; }
     .confetti-piece {
       position:absolute;
-      top:-10px;
       width:8px; height:8px;
-      opacity:.9;
-      animation: confetti-fall 1.6s ease-out forwards;
+      opacity:.95;
+      transform: translate(-50%, -50%);
+      animation: confetti-explode 1.2s ease-out forwards;
     }
-    @keyframes confetti-fall {
-      to { transform: translateY(110%); opacity:0; }
+    @keyframes confetti-explode {
+      to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))); opacity:0; }
     }
   `;
   document.head.appendChild(st);
@@ -754,7 +754,7 @@ export class BoardUI {
   }
 
   // -------- celebration --------
-  celebrate(){
+  celebrate(square){
     // remove any existing celebration
     this.stopCelebration();
 
@@ -762,18 +762,24 @@ export class BoardUI {
     root.className = 'confetti-root';
     this.boardEl.appendChild(root);
 
+    const origin = square ? this.squareCenterPx(square) : { x: this.boardEl.clientWidth / 2, y: this.boardEl.clientHeight / 2 };
     const colors = ['#e74c3c', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6'];
-    for (let i = 0; i < 40; i++){
+    for (let i = 0; i < 120; i++){
       const piece = document.createElement('div');
       piece.className = 'confetti-piece';
-      piece.style.left = Math.random() * 100 + '%';
+      piece.style.left = `${origin.x}px`;
+      piece.style.top = `${origin.y}px`;
       piece.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
-      piece.style.animationDelay = (Math.random() * 0.7).toFixed(2) + 's';
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 80 + Math.random() * 120;
+      piece.style.setProperty('--dx', `${Math.cos(angle) * distance}px`);
+      piece.style.setProperty('--dy', `${Math.sin(angle) * distance}px`);
+      piece.style.animationDelay = (Math.random() * 0.2).toFixed(2) + 's';
       root.appendChild(piece);
     }
 
     this._celebrationRoot = root;
-    this._celebrationTimer = setTimeout(()=>this.stopCelebration(), 1600);
+    this._celebrationTimer = setTimeout(()=>this.stopCelebration(), 1500);
   }
 
   stopCelebration(){
