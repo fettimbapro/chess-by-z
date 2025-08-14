@@ -12,6 +12,8 @@ const qs = (s) => document.querySelector(s);
 
 class App {
   constructor() {
+    window.app = this;
+
     // DOM
     this.boardEl = qs('#board');
     this.arrowSvg = qs('#arrowSvg');
@@ -516,6 +518,9 @@ class App {
   syncBoard(){
     this.ui.setOrientation(this.sideSel.value);
     this.ui.setFen(this.getActiveFen());
+    const ply = this.inReview ? this.reviewPly : this.getSanHistory().length;
+    const inst = window.DrawOverlayInstance;
+    if (inst && typeof inst.restoreSnapshotForPly === 'function') inst.restoreSnapshotForPly(ply);
   }
 
   refreshAll(){
