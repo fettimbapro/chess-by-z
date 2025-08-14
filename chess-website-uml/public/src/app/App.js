@@ -27,6 +27,8 @@ class App {
     this.sideSel = qs('#side');
     this.flipBtn = qs('#flip');
     this.newGameBtn = qs('#newGame');
+    this.pgnText = qs('#pgnText');
+    this.fenText = qs('#fenText');
 
     // Engine knobs
     this.elo = qs('#elo'); this.eloVal = qs('#eloVal');
@@ -191,6 +193,44 @@ class App {
     qs('#analyzeBtn').addEventListener('click', () => this.requestAnalysis());
     qs('#hintBtn').addEventListener('click', () => this.requestHint());
     qs('#stopBtn').addEventListener('click', () => this.engine.stop());
+
+    // PGN / FEN helpers
+    qs('#copyPgn').addEventListener('click', () => {
+      const pgn = this.game.pgn();
+      this.pgnText.value = pgn;
+      try { navigator.clipboard?.writeText(pgn); this.engineStatus.textContent = 'PGN copied'; }
+      catch {}
+    });
+    qs('#loadPgn').addEventListener('click', () => {
+      const txt = this.pgnText.value.trim();
+      if (!txt) return;
+      if (this.game.loadPgn(txt)) {
+        this.exitReview();
+        this.syncBoard();
+        this.refreshAll();
+        this.engineStatus.textContent = 'PGN loaded';
+      } else {
+        this.engineStatus.textContent = 'Invalid PGN';
+      }
+    });
+    qs('#exportFen').addEventListener('click', () => {
+      const fen = this.game.fen();
+      this.fenText.value = fen;
+      try { navigator.clipboard?.writeText(fen); this.engineStatus.textContent = 'FEN copied'; }
+      catch {}
+    });
+    qs('#importFen').addEventListener('click', () => {
+      const txt = this.fenText.value.trim();
+      if (!txt) return;
+      if (this.game.load(txt)) {
+        this.exitReview();
+        this.syncBoard();
+        this.refreshAll();
+        this.engineStatus.textContent = 'FEN loaded';
+      } else {
+        this.engineStatus.textContent = 'Invalid FEN';
+      }
+    });
   }
 
   // === Review hotkeys & click-to-exit ===
