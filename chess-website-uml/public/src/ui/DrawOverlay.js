@@ -280,15 +280,9 @@
 
   DrawOverlay.prototype.recordSnapshot = function(){
     const snap = this.getUserDrawings();
-    // Avoid pushing duplicates if same as last
-    const last = this._snapshots[this._cursor-1];
-    const asJson = JSON.stringify(snap);
-    const lastJson = last ? JSON.stringify(last) : '';
-    if (asJson !== lastJson){
-      this._snapshots.splice(this._cursor); // drop anything ahead
-      this._snapshots.push(snap);
-      this._cursor = this._snapshots.length;
-    }
+    this._snapshots.splice(this._cursor); // drop anything ahead
+    this._snapshots.push(snap);
+    this._cursor = this._snapshots.length;
   };
 
   DrawOverlay.prototype.finishRightDrag = function(e){
