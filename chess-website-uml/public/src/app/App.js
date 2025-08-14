@@ -75,7 +75,8 @@ export class App {
       evalbar: { root: this.evalbar, white: this.evalWhite, black: this.evalBlack },
       onUserMove: this.onUserMove.bind(this),
       getPieceAt: this.getPieceAt.bind(this),
-      getLegalTargets: this.getLegalTargets.bind(this)
+      getLegalTargets: this.getLegalTargets.bind(this),
+      cancelPreMove: this.cancelPreMove.bind(this)
     });
     this.applyOrientation();
     this.updateSwitchButtonText();
@@ -247,7 +248,7 @@ export class App {
     this.exitReview();
     this.lastCelebrationPly = -1;
     this.gameOver = false;
-    this.preMove = null;
+    this.cancelPreMove();
     this.game.reset();
     this.ui.stopCelebration?.();
     this.ui.clearUserArrows?.();
@@ -385,6 +386,7 @@ export class App {
       const human = (this.sideSel.value === 'white') ? 'w' : 'b';
       if (this.game.turn() !== human){
         this.preMove = { from, to, promotion: promotion || 'q' };
+        this.ui.markPreMove?.(from, to);
         return true;
       }
     }
@@ -416,7 +418,15 @@ export class App {
     const mv = this.preMove;
     this.preMove = null;
     this.ui.clearArrow?.();
+    this.ui.clearPreMove?.();
     this.onUserMove(mv);
+  }
+
+  cancelPreMove(){
+    if (!this.preMove) return false;
+    this.preMove = null;
+    this.ui.clearPreMove?.();
+    return true;
   }
 
   maybeEngineMove(){
