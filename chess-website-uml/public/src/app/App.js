@@ -68,8 +68,8 @@ class App {
       promoEl: this.promo,
       evalbar: { root: this.evalbar, white: this.evalWhite, black: this.evalBlack },
       onUserMove: this.onUserMove.bind(this),
-      getPieceAt: (sq) => this.game.get(sq),
-      getLegalTargets: (sq) => this.game.legalMovesFrom(sq)
+      getPieceAt: this.getPieceAt.bind(this),
+      getLegalTargets: this.getLegalTargets.bind(this)
     });
     this.ui.setOrientation(this.sideSel.value);
 
@@ -295,8 +295,8 @@ class App {
 
     // Restore live providers (board interaction enabled again)
     this.ui.onUserMove = this.onUserMove.bind(this);
-    this.ui.getPieceAt = (sq) => this.game.get(sq);
-    this.ui.getLegalTargets = (sq) => this.game.legalMovesFrom(sq);
+    this.ui.getPieceAt = this.getPieceAt.bind(this);
+    this.ui.getLegalTargets = this.getLegalTargets.bind(this);
 
     this.syncBoard();   // back to live fen
     this.refreshAll();
@@ -314,8 +314,36 @@ class App {
     return g.fen();
   }
 
+  getPieceAt(sq){
+    const p = this.game.get(sq);
+    const turn = this.game.turn();
+    if (this.modeSel.value === 'play'){
+      const human = (this.sideSel.value === 'white') ? 'w' : 'b';
+      if (turn !== human || !p || p.color !== human) return null;
+      return p;
+    }
+    if (!p || p.color !== turn) return null;
+    return p;
+  }
+
+  getLegalTargets(sq){
+    const p = this.game.get(sq);
+    const turn = this.game.turn();
+    if (this.modeSel.value === 'play'){
+      const human = (this.sideSel.value === 'white') ? 'w' : 'b';
+      if (turn !== human || !p || p.color !== human) return [];
+      return this.game.legalMovesFrom(sq);
+    }
+    if (!p || p.color !== turn) return [];
+    return this.game.legalMovesFrom(sq);
+  }
+
   onUserMove({ from, to, promotion }) {
     if (this.inReview || this.gameOver) return false; // safety net
+    if (this.modeSel.value === 'play'){
+      const human = (this.sideSel.value === 'white') ? 'w' : 'b';
+      if (this.game.turn() !== human) return false;
+    }
     const mv = this.game.move({ from, to, promotion: promotion || 'q' });
     if (!mv) return false;
 
