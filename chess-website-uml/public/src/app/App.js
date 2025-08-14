@@ -90,7 +90,7 @@ class App {
         hintBtn: qs('#puzzleHint'), puzzleInfo: qs('#puzzleInfo'), puzzleStatus: qs('#puzzleStatus')
       },
       onStateChanged: () => { this.syncBoard(); this.refreshAll(); },
-      onMove: (mv) => this.sounds.play(mv?.captured ? 'capture' : 'move')
+      onMove: (mv) => this.playMoveSound(mv)
     });
 
     // Floating info popover
@@ -364,6 +364,12 @@ class App {
     return this.game.legalMovesFrom(sq);
   }
 
+  playMoveSound(mv){
+    if (this.isMateNow()) this.sounds.play('checkmate');
+    else if (this.isCheckNow()) this.sounds.play('check');
+    else this.sounds.play(mv?.captured ? 'capture' : 'move');
+  }
+
   onUserMove({ from, to, promotion }) {
     if (this.inReview || this.gameOver) return false; // safety net
     if (this.modeSel.value === 'play'){
@@ -372,7 +378,7 @@ class App {
     }
     const mv = this.game.move({ from, to, promotion: promotion || 'q' });
     if (!mv) return false;
-    this.sounds.play(mv.captured ? 'capture' : 'move');
+    this.playMoveSound(mv);
 
     if (this.modeSel.value === 'play') { this.clock.onMoveApplied(); this.clockPanel.startIfNotRunning(); }
     if (this.modeSel.value === 'puzzle') {
@@ -424,7 +430,7 @@ class App {
           this.clock.onMoveApplied?.();
           const last = this.game.historyVerbose?.().slice(-1)[0] || mv;
           if (last?.from && last?.to) this.ui.drawArrowUci(last.from + last.to + (last.promotion||''), true);
-          this.sounds.play(mv.captured ? 'capture' : 'move');
+          this.playMoveSound(mv);
           this.syncBoard(); this.refreshAll();
           this.maybeCelebrate();
           this.checkGameOver();
@@ -445,7 +451,7 @@ class App {
       if (uci) {
         const mv = this.game.moveUci(uci);
         if (this.modeSel.value === 'play') this.clock.onMoveApplied();
-        this.sounds.play(mv?.captured ? 'capture' : 'move');
+        this.playMoveSound(mv);
         this.syncBoard(); this.refreshAll();
         this.ui.drawArrowUci(uci, true);
         this.maybeCelebrate();
@@ -648,7 +654,20 @@ class App {
     return false;
   }
 
-  // === Mate detection & celebration ===
+  // === Check & Mate detection & celebration ===
+  isCheckNow(){
+    const lastSan = this.getSanHistory().slice(-1)[0] || '';
+    if (/\+$/.test(lastSan)) return true;
+    if (typeof this.game.isCheck === 'function' && this.game.isCheck()) return true;
+    if (typeof this.game.inCheck === 'function' && this.game.inCheck()) return true;
+    if (this.game.ch){
+      const ch = this.game.ch;
+      if (typeof ch.in_check === 'function' && ch.in_check()) return true;
+      if (typeof ch.isCheck === 'function' && ch.isCheck()) return true;
+    }
+    return false;
+  }
+
   isMateNow(){
     // 1) Library-agnostic: last SAN ends with '#'
     const lastSan = this.getSanHistory().slice(-1)[0] || '';

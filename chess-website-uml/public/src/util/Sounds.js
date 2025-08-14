@@ -8,6 +8,9 @@ export class Sounds {
       const ctx = this.ctx || (this.ctx = new (window.AudioContext || window.webkitAudioContext)());
       const now = ctx.currentTime;
 
+      // slight variation each play
+      const detune = 1 + (Math.random() - 0.5) * 0.1; // ±5%
+
       const gain = ctx.createGain();
       gain.gain.setValueAtTime(0, now);
       gain.gain.linearRampToValueAtTime(0.09, now + 0.01);
@@ -22,23 +25,31 @@ export class Sounds {
       }
       noise.buffer = buffer;
 
+      const profiles = {
+        move: { filter: 1500, osc: 200, dur: 0.2 },
+        capture: { filter: 1000, osc: 160, dur: 0.2 },
+        check: { filter: 1700, osc: 400, dur: 0.25 },
+        checkmate: { filter: 1800, osc: 600, dur: 0.3 }
+      };
+      const p = profiles[name] || profiles.move;
+
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = name === 'capture' ? 1000 : 1500;
+      filter.frequency.value = p.filter * detune;
       filter.Q.value = 0.5;
       noise.connect(filter);
       filter.connect(gain);
 
-      // subtle low thump
+      // subtle tone
       const osc = ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.value = name === 'capture' ? 160 : 200;
+      osc.frequency.value = p.osc * detune;
       osc.connect(gain);
 
       noise.start(now);
       osc.start(now);
-      noise.stop(now + 0.2);
-      osc.stop(now + 0.2);
+      noise.stop(now + p.dur);
+      osc.stop(now + p.dur);
 
       gain.connect(ctx.destination);
     } catch {
