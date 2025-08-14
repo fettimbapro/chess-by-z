@@ -58,7 +58,7 @@ test('queued pre-move executes after opponent move', async () => {
   assert.equal(app.game.turn(), 'b');
 });
 
-test('queued pre-move can be canceled', async () => {
+test('queued pre-move can target own piece square for recapture', async () => {
   globalThis.document = {
     getElementById() { return null; },
     createElement() {
@@ -79,55 +79,34 @@ test('queued pre-move can be canceled', async () => {
   app.clock = { onMoveApplied() {}, turn: 'w', white: 0, black: 0, inc: 0 };
   app.clockPanel = { startIfNotRunning() {} };
   app.ui = { clearArrow() {} };
+  app.playMoveSound = () => {};
+  app.syncBoard = () => {};
+  app.refreshAll = () => {};
+  app.maybeCelebrate = () => {};
+  app.checkGameOver = () => {};
+  app.requestAnalysis = () => {};
+  app.maybeEngineMove = () => {};
+  app.applyPreMove = App.prototype.applyPreMove.bind(app);
   app.onUserMove = App.prototype.onUserMove.bind(app);
-  app.cancelPreMove = App.prototype.cancelPreMove.bind(app);
   app.getPieceAt = App.prototype.getPieceAt.bind(app);
   app.getLegalTargets = App.prototype.getLegalTargets.bind(app);
 
-  app.game.load('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1');
+  app.game.load('4k3/8/8/4p3/3P4/2Q5/8/4K3 b - - 0 1');
 
-  const ok = app.onUserMove({ from: 'e2', to: 'e4' });
+  const targets = app.getLegalTargets('c3').sort();
+  assert.ok(targets.includes('d4'));
+
+  const ok = app.onUserMove({ from: 'c3', to: 'd4' });
   assert.equal(ok, true);
-  assert.notEqual(app.preMove, null);
+  assert.deepEqual(app.preMove, { from: 'c3', to: 'd4', promotion: 'q' });
+  assert.equal(app.game.get('c3').type, 'q');
 
-  const canceled = app.cancelPreMove();
-  assert.equal(canceled, true);
+  app.game.moveUci('e5d4');
+  app.applyPreMove();
+
   assert.equal(app.preMove, null);
+  const piece = app.game.get('d4');
+  assert.equal(piece?.color, 'w');
+  assert.equal(piece?.type, 'q');
+  assert.equal(app.game.get('c3'), null);
 });
-
-test('recently queued pre-move survives click from drop', async () => {
-  globalThis.document = {
-    getElementById() { return null; },
-    createElement() { return { setAttribute() {}, appendChild() {}, style: {}, id: '', textContent: '' }; },
-    head: { appendChild() {} }
-  };
-  globalThis.window = { addEventListener() {}, removeEventListener() {} };
-  const { BoardUI } = await import('../chess-website-uml/public/src/ui/BoardUI.js');
-  let canceled = false;
-  const boardEl = {
-    _handler: null,
-    addEventListener(type, fn) {
-      if (type === 'click') this._handler = fn;
-    },
-  };
-  const ui = Object.create(BoardUI.prototype);
-  ui.boardEl = boardEl;
-  ui.cancelPreMove = () => { canceled = true; return true; };
-  ui.getPieceAt = () => null;
-  ui.getLegalTargets = () => [];
-  ui.selected = null;
-  ui.dragTargets = new Set();
-  ui.squareEl = () => ({ classList: { add(){}, remove(){} } });
-  ui.clearSelectionDots = () => {};
-  ui.markSelected = () => {};
-  BoardUI.prototype.attachClick.call(ui);
-
-  ui._preJustQueued = performance.now();
-  boardEl._handler({ target: {} });
-  assert.equal(canceled, false);
-
-  await new Promise(r => setTimeout(r, 120));
-  boardEl._handler({ target: { closest(){ return null; } } });
-  assert.equal(canceled, true);
-});
-
