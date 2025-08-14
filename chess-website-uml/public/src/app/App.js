@@ -55,7 +55,10 @@ export class App {
     // Core
     this.game = new Game();
     this.clock = new Clock();
-    this.engine = new WorkerEngine();
+    // Allow switching between classic and strong engine via ?engine=strong
+    const params = new URLSearchParams(window.location.search);
+    const engineVariant = params.get('engine') === 'strong' ? 'strong' : 'classic';
+    this.engine = new WorkerEngine({ variant: engineVariant });
     this.sounds = new Sounds();
 
     // Clock UI

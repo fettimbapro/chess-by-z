@@ -24,6 +24,10 @@ npm run dev
 
 This hosts the site at `http://127.0.0.1:8080/`.
 
+### Engine variants
+
+By default the site runs the original lightweight engine. For a stronger engine with enhanced evaluation you can append `?engine=strong` to the URL (e.g. `http://127.0.0.1:8080/?engine=strong`). This makes it easy to A/B test the classic and strong engines.
+
 ## Testing
 Unit tests are written with the built-in Node.js test runner.
 
