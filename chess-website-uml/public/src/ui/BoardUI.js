@@ -772,11 +772,52 @@ export class BoardUI {
     const to = this.squareFromXY(x, y);
     if (!from || !to || from === to || !this.dragTargets.has(to)) return;
 
-    const ok = this.onUserMove({ from, to });
-    if (ok) {
-      this.clearSelectionDots();
-      this.selected = null;
+    const piece = this.getPieceAt(from);
+    if (
+      piece?.type === "p" &&
+      (to[1] === "8" || to[1] === "1")
+    ) {
+      this.promptPromotion(from, to, piece.color);
+    } else {
+      const ok = this.onUserMove({ from, to });
+      if (ok) {
+        this.clearSelectionDots();
+        this.selected = null;
+      }
     }
+  }
+
+  promptPromotion(from, to, color) {
+    if (!this.promoEl) {
+      const ok = this.onUserMove({ from, to, promotion: "q" });
+      if (ok) {
+        this.clearSelectionDots();
+        this.selected = null;
+      }
+      return;
+    }
+    const opts = this.promoEl.querySelectorAll(".opt");
+    opts.forEach((el) => {
+      el.classList.remove("pw", "pb");
+      el.classList.add(color === "w" ? "pw" : "pb");
+      const piece = el.dataset.piece;
+      el.textContent = BLACK_GLYPH[piece];
+    });
+    this.promoEl.style.display = "flex";
+    const handler = (ev) => {
+      const opt = ev.target.closest(".opt");
+      if (!opt) return;
+      const piece = opt.dataset.piece;
+      this.promoEl.style.display = "none";
+      this.promoEl.removeEventListener("click", handler);
+      const ok = this.onUserMove({ from, to, promotion: piece });
+      if (ok) {
+        this.clearSelectionDots();
+        this.squareEl(from)?.classList?.remove("sel");
+        this.selected = null;
+      }
+    };
+    this.promoEl.addEventListener("click", handler, { once: true });
   }
 
   attachClick() {
@@ -796,11 +837,19 @@ export class BoardUI {
 
       // Move if selected and target is legal
       if (this.selected && this.dragTargets.has(sq)) {
-        const ok = this.onUserMove({ from: this.selected, to: sq });
-        if (ok) {
-          this.clearSelectionDots();
-          this.squareEl(this.selected)?.classList?.remove("sel");
-          this.selected = null;
+        const pieceSel = this.getPieceAt(this.selected);
+        if (
+          pieceSel?.type === "p" &&
+          (sq[1] === "8" || sq[1] === "1")
+        ) {
+          this.promptPromotion(this.selected, sq, pieceSel.color);
+        } else {
+          const ok = this.onUserMove({ from: this.selected, to: sq });
+          if (ok) {
+            this.clearSelectionDots();
+            this.squareEl(this.selected)?.classList?.remove("sel");
+            this.selected = null;
+          }
         }
         return;
       }
