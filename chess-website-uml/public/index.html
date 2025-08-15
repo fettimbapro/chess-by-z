@@ -26,7 +26,8 @@
     .page{max-width:1400px; margin:0 auto; padding:16px}
 
     header{display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:12px}
-    header h1{margin:4px 0 0 0; font-weight:800; letter-spacing:.2px; text-align:center}
+    header h1{position:relative; margin:4px 0 0 0; font-weight:800; letter-spacing:.2px; text-align:center}
+    header h1 .by-sam{position:absolute; left:100%; top:50%; transform:translateY(-50%); margin-left:8px; font-size:30%; color:var(--muted)}
 
     footer.site-footer{
       margin-top:40px; padding-top:8px; border-top:1px solid #222a36;
@@ -188,7 +189,7 @@
 <body>
   <div class="page">
     <header>
-      <h1>Chess by Sam</h1>
+      <h1>Chess<span class="by-sam">by Sam</span></h1>
     </header>
 
     <div class="stack">
