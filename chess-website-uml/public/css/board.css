@@ -89,6 +89,8 @@ evalbar .black{background:#0c0f14; width:100%; height:50%}
 .promo{position:absolute; inset:0; background:rgba(10,14,20,.5); display:none; align-items:center; justify-content:center; z-index:30}
 .promo .box{background:#0c1118; border:1px solid #1c2533; border-radius:12px; padding:10px; display:flex; gap:8px}
 .promo .opt{width:56px; height:56px; background:#141a25; border:1px solid #1c2533; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:28px}
+.promo .opt.pw{color:#f2f5f8; text-shadow:0 1px 0 rgba(0,0,0,.6),0 0 4px rgba(0,0,0,.35)}
+.promo .opt.pb{color:#101419; text-shadow:0 1px 0 rgba(255,255,255,.08),0 0 2px rgba(255,255,255,.05)}
 
 /* === Game info trigger + popover === */
 .game-info-trigger{
