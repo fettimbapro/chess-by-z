@@ -52,7 +52,11 @@ function normaliseToFenAndUci(src){
     const p = src.puzzle || {};
     const g = src.game || {};
     // Some endpoints nest the FEN under game
-    const fen = p.fen || g.fen || src.fen || '';
+    let fen = p.fen || g.fen || src.fen || '';
+    // Recent Lichess endpoints omit the FEN but provide full PGN
+    if (!fen && g.pgn && p.initialPly != null) {
+      fen = fenFromPgn(g.pgn, +p.initialPly);
+    }
     const uciList =
       Array.isArray(p.solution) ? p.solution.slice() :
       typeof p.solution === 'string' ? p.solution.trim().split(/\s+/) :
@@ -70,5 +74,20 @@ function normaliseToFenAndUci(src){
     Array.isArray(src.moves) ? src.moves.slice() :
     typeof src.moves === 'string' ? src.moves.trim().split(/\s+/) : [];
   return { id: src.id, fen, uciList, rating: src.rating, themes: src.themes, gameUrl: src.gameUrl };
+}
+
+function fenFromPgn(pgn, ply){
+  try {
+    const target = Math.max(0, ply + 1);
+    const game = new Chess();
+    const moves = String(pgn || '').trim().split(/\s+/);
+    let count = 0;
+    for (let i = 0; i < moves.length && count < target; i++) {
+      if (game.move(moves[i])) count++;
+    }
+    return game.fen();
+  } catch {
+    return '';
+  }
 }
 
