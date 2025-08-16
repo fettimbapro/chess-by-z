@@ -100,11 +100,7 @@ export class App {
         hintBtn: qs('#puzzleHint'), puzzleInfo: qs('#puzzleInfo'), puzzleStatus: qs('#puzzleStatus')
       },
       onStateChanged: () => { this.syncBoard(); this.refreshAll(); },
-      onMove: (mv) => this.playMoveSound(mv),
-      onPuzzleLoad: (turn) => {
-        this.sideSel.value = (turn === 'w') ? 'white' : 'black';
-        this.updateSwitchButtonText();
-      }
+      onMove: (mv) => this.playMoveSound(mv)
     });
 
     // --- REVIEW MODE state ---
