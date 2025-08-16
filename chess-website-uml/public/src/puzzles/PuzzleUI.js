@@ -5,13 +5,14 @@ import { adaptLichessPuzzle } from './PuzzleModel.js';
 function on(el, type, fn){ if (el) el.addEventListener(type, fn); }
 
 export class PuzzleUI {
-  constructor({ game, ui, service, dom, onStateChanged, onMove }) {
+  constructor({ game, ui, service, dom, onStateChanged, onMove, onPuzzleLoad }) {
     this.game = game;
     this.ui = ui;
     this.svc = service;
     this.dom = dom || {};
     this.onStateChanged = onStateChanged || (()=>{});
     this.onMove = onMove || (()=>{});
+    this.onPuzzleLoad = onPuzzleLoad || (()=>{});
 
     this.current = null;
     this.index = 0;
@@ -122,6 +123,7 @@ export class PuzzleUI {
     }
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = '';
 
+    this.onPuzzleLoad(this.game.turn?.());
     this.onStateChanged();
     if (center && this.ui?.resizeOverlay) this.ui.resizeOverlay();
   }

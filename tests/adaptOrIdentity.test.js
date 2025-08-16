@@ -20,3 +20,38 @@ test('adaptOrIdentity adapts Lichess daily puzzle', async () => {
   assert.equal(res.fen, SAMPLE.puzzle.fen);
   assert.deepEqual(res.solutionSan, EXPECTED_SAN);
 });
+
+const SAMPLE_STR = {
+  puzzle: {
+    id: 'p124',
+    fen: 'r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+    rating: 1500,
+    themes: ['fork'],
+    solution: 'd7d5 e4d5 d8d5 b1c3'
+  }
+};
+
+test('adaptOrIdentity handles solution strings', async () => {
+  const res = await adaptOrIdentity(SAMPLE_STR);
+  assert.equal(res.fen, SAMPLE_STR.puzzle.fen);
+  assert.deepEqual(res.solutionSan, EXPECTED_SAN);
+});
+
+const SAMPLE_GAME_FEN = {
+  puzzle: {
+    id: 'p125',
+    rating: 1500,
+    themes: ['fork'],
+    solution: ['d7d5', 'e4d5']
+  },
+  game: {
+    id: 'HIJKLMN',
+    fen: 'r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2'
+  }
+};
+
+test('adaptOrIdentity uses game FEN when puzzle FEN missing', async () => {
+  const res = await adaptOrIdentity(SAMPLE_GAME_FEN);
+  assert.equal(res.fen, SAMPLE_GAME_FEN.game.fen);
+  assert.deepEqual(res.solutionSan, ['d5', 'exd5']);
+});
