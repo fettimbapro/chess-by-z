@@ -1,8 +1,13 @@
 import { Chess } from "../vendor/chess.mjs";
 
 export function estimateComplexity(fen) {
-  const ch = new Chess(fen);
-  const moves = ch.moves({ verbose: true });
+  let moves = [];
+  try {
+    const ch = new Chess(fen);
+    moves = ch.moves({ verbose: true });
+  } catch {
+    return 0;
+  }
   let complexity = moves.length;
   let tactical = 0;
   for (const mv of moves) {

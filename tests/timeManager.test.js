@@ -34,3 +34,7 @@ test("panic mode limits time usage when very low on clock", () => {
   });
   assert.ok(t <= 250);
 });
+
+test("estimateComplexity handles invalid FEN", () => {
+  assert.equal(estimateComplexity("invalid fen"), 0);
+});
