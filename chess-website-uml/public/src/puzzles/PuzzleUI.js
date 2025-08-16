@@ -134,8 +134,7 @@ export class PuzzleUI {
     if (!sanNeeded) return false;
 
     // Compare user move with expected SAN
-    const tmp = new Chess(this.game.fen());
-    const userSan = tmp.move({ from: mv.from, to: mv.to, promotion: mv.promotion }).san;
+    const userSan = mv?.san;
     if (userSan === sanNeeded){
       // Good move
       this.index++;
@@ -146,10 +145,8 @@ export class PuzzleUI {
       } else {
         // Auto play the opponent reply (next SAN)
         const reply = this.current.solutionSan[this.index];
-        const tmp2 = new Chess(this.game.fen());
-        const rm = tmp2.move(reply);
-        if (rm){
-          const applied = this.game.moveSan(reply);
+        const applied = this.game.moveSan(reply);
+        if (applied){
           this.onMove(applied);
           this.index++;
           this.onStateChanged();
