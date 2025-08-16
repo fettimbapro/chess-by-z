@@ -224,13 +224,6 @@
       <!-- CONTROLS UNDER THE BOARD -->
       <div class="card">
         <div class="row">
-          <label for="mode">Mode</label>
-          <select id="mode">
-            <option value="play">Play vs Engine</option>
-            <option value="analysis">Analysis</option>
-            <option value="puzzle">Puzzles</option>
-          </select>
-
           <label for="side" style="display:none">Your side</label>
           <select id="side" style="display:none">
             <option value="white">White</option>
@@ -238,6 +231,17 @@
           </select>
 
           <button id="switchSide" class="switch-btn">Switch to black and restart</button>
+        </div>
+
+        <div class="row" id="modeButtons">
+          <button class="btn" data-mode="play">Play vs Engine</button>
+          <button class="btn" data-mode="analysis">Analysis</button>
+          <button class="btn" data-mode="puzzle">Puzzles</button>
+          <select id="mode" style="display:none">
+            <option value="play">Play vs Engine</option>
+            <option value="analysis">Analysis</option>
+            <option value="puzzle">Puzzles</option>
+          </select>
         </div>
 
         <div class="row">
