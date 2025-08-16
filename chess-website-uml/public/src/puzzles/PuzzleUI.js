@@ -176,10 +176,15 @@ export class PuzzleUI {
 
 // Prefer native lichess format, else pass-through
 export async function adaptOrIdentity(p){
-  try{
-    if (p && (p.puzzle || p.id || p.PuzzleId)) return adaptLichessPuzzle(p);
-  }catch{}
+  if (!p) throw new Error('No puzzle data');
+
+  // Prefer native lichess format and let the adapter report issues
+  if (p.puzzle || p.id || p.PuzzleId) {
+    return adaptLichessPuzzle(p);
+  }
+
   // fallback: expect { id, fen, solution: [SAN...] }
+  if (!p.fen) throw new Error('Puzzle missing FEN');
   return { id: p.id||'local', fen: p.fen, themes: p.themes || p.thema || '', solutionSan: (p.solution||[]).slice() };
 }
 
