@@ -92,7 +92,7 @@ export class PuzzleUI {
 
   loadBuiltinRandom(){
     const p = BUILTIN_PUZZLES[Math.floor(Math.random()*BUILTIN_PUZZLES.length)];
-    this.current = { id:p.id, thema:p.thema, fen:p.fen, solutionSan: p.solution.slice() };
+    this.current = { id:p.id, themes:p.themes, fen:p.fen, solutionSan: p.solution.slice() };
     this.index = 0;
     this.applyCurrent(true);
   }
@@ -117,8 +117,8 @@ export class PuzzleUI {
 
     // show puzzle meta
     if (this.dom?.puzzleInfo){
-      const tag = this.current.thema ? ` — <span class="muted">${this.current.thema}</span>` : '';
-      this.dom.puzzleInfo.innerHTML = `<b>Puzzle</b> #${this.current.id || 'local'}${tag}`;
+      const themeText = this.current.themes ? ` — <span class="muted">${this.current.themes}</span>` : '';
+      this.dom.puzzleInfo.innerHTML = `<b>Puzzle</b> #${this.current.id || 'local'}${themeText}`;
     }
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = '';
 
@@ -180,19 +180,19 @@ async function adaptOrIdentity(p){
     if (p && (p.id || p.PuzzleId)) return adaptLichessPuzzle(p);
   }catch{}
   // fallback: expect { id, fen, solution: [SAN...] }
-  return { id: p.id||'local', fen: p.fen, thema: p.thema||'', solutionSan: (p.solution||[]).slice() };
+  return { id: p.id||'local', fen: p.fen, themes: p.themes || p.thema || '', solutionSan: (p.solution||[]).slice() };
 }
 
 // Tiny demo pack to prime the UI if users don’t provide one
 const DEMO_PACK = [
-  { id:'demo-1', fen:'r2q1rk1/pp1b1ppp/2n1pn2/2bp4/3P4/2PBPN2/PP3PPP/R1BQ1RK1 w - - 0 1', thema:'QGD', solution:['dxc5','e5','e4'] },
-  { id:'demo-2', fen:'rnbqk2r/pppp1ppp/5n2/4p3/1bP5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 2 4', thema:'Sicilian/Caro', solution:['Nxe5','O-O','g3'] },
-  { id:'demo-3', fen:'r2q1rk1/pp2bppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1', thema:'QGD', solution:['dxc5','e5','e4'] },
+  { id:'demo-1', fen:'r2q1rk1/pp1b1ppp/2n1pn2/2bp4/3P4/2PBPN2/PP3PPP/R1BQ1RK1 w - - 0 1', themes:'QGD', solution:['dxc5','e5','e4'] },
+  { id:'demo-2', fen:'rnbqk2r/pppp1ppp/5n2/4p3/1bP5/2N2N2/PP1PPPPP/R1BQKB1R w KQkq - 2 4', themes:'Sicilian/Caro', solution:['Nxe5','O-O','g3'] },
+  { id:'demo-3', fen:'r2q1rk1/pp2bppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1', themes:'QGD', solution:['dxc5','e5','e4'] },
 ];
 
 // A few built-in puzzles if there’s nothing else around
 const BUILTIN_PUZZLES = [
-  { id:'b1', thema:'Mate in 1', fen:'6k1/5ppp/8/8/8/8/5PPP/6KQ w - - 0 1', solution:['Qa8#'] },
-  { id:'b2', thema:'Fork', fen:'r1bqkbnr/pppp1ppp/2n5/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 2 3', solution:['d5','Nd4'] },
-  { id:'b3', thema:'Skewer', fen:'3r2k1/pp3ppp/8/8/8/8/PP3PPP/3R2K1 w - - 0 1', solution:['Rxd8#'] },
+  { id:'b1', themes:'Mate in 1', fen:'6k1/5ppp/8/8/8/8/5PPP/6KQ w - - 0 1', solution:['Qa8#'] },
+  { id:'b2', themes:'Fork', fen:'r1bqkbnr/pppp1ppp/2n5/4p3/3P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 2 3', solution:['d5','Nd4'] },
+  { id:'b3', themes:'Skewer', fen:'3r2k1/pp3ppp/8/8/8/8/PP3PPP/3R2K1 w - - 0 1', solution:['Rxd8#'] },
 ];

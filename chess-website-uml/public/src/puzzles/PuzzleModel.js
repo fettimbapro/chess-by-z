@@ -23,18 +23,10 @@ export function adaptLichessPuzzle(input){
 
   if (!fen || !uciList.length) throw new Error('Puzzle missing FEN or moves');
 
-  // Convert UCI -> SAN (after first move)
+  // Convert UCI -> SAN for the entire solution sequence.
   const tmp = new Chess(fen);
-  // Lichess puzzles: show position AFTER the first solution move.
-  const first = uciList[0];
-  const m0 = first.match(/^([a-h][1-8])([a-h][1-8])([qrbn])?$/);
-  if (!m0 || !tmp.move({ from: m0[1], to: m0[2], promotion: m0[3] || undefined })) {
-    throw new Error('Invalid first move vs FEN');
-  }
-  const startFen = tmp.fen();
-
   const solutionSan = [];
-  for (let i = 1; i < uciList.length; i++) {
+  for (let i = 0; i < uciList.length; i++) {
     const m = uciList[i].match(/^([a-h][1-8])([a-h][1-8])([qrbn])?$/);
     if (!m) break;
     const step = tmp.move({ from: m[1], to: m[2], promotion: m[3] || undefined });
@@ -44,7 +36,7 @@ export function adaptLichessPuzzle(input){
 
   return {
     id: id || 'Lichess',
-    fen: startFen,
+    fen,
     solutionSan,
     rating: rating || 0,
     themes: Array.isArray(themes) ? themes.join(',') : (themes || ''),
