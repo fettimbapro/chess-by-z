@@ -175,9 +175,9 @@ export class PuzzleUI {
 }
 
 // Prefer native lichess format, else pass-through
-async function adaptOrIdentity(p){
+export async function adaptOrIdentity(p){
   try{
-    if (p && (p.id || p.PuzzleId)) return adaptLichessPuzzle(p);
+    if (p && (p.puzzle || p.id || p.PuzzleId)) return adaptLichessPuzzle(p);
   }catch{}
   // fallback: expect { id, fen, solution: [SAN...] }
   return { id: p.id||'local', fen: p.fen, themes: p.themes || p.thema || '', solutionSan: (p.solution||[]).slice() };
