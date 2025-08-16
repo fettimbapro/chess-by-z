@@ -31,6 +31,7 @@ export class App {
 
     // Controls
     this.modeSel = qs('#mode');
+    this.modeBtns = Array.from(document.querySelectorAll('#modeButtons [data-mode]'));
     this.sideSel = qs('#side');
     this.switchBtn = qs('#switchSide');
     this.confirmRestart = false;
@@ -154,6 +155,7 @@ export class App {
 
     this.syncBoard();
     this.refreshAll();
+    this.updateModeButtonStyles();
 
     // Do NOT start clocks yet; only after the human makes their first move.
     if (this.modeSel.value === 'play') {
@@ -170,12 +172,25 @@ export class App {
     link(this.depth, this.depthVal);
     link(this.multipv, this.multipvVal);
 
-    this.modeSel.addEventListener('change', () => {
+    this.modeBtns.forEach(btn => btn.addEventListener('click', () => this.setMode(btn.dataset.mode)));
+
+    this.modeSel.addEventListener('change', async () => {
       const m = this.modeSel.value;
       this.puzzles.show(m === 'puzzle');
       if (m === 'play') { this.maybeEngineMove(); }
       else this.clock.pause();
+      if (m === 'puzzle') {
+        this.puzzles.resetProgress();
+        this.clockPanel.pause();
+        try {
+          const p = await this.puzzleService.fetchDaily();
+          await this.puzzles.loadConvertedPuzzle(p);
+        } catch (e) {
+          this.engineStatus.textContent = 'Daily puzzle fetch failed';
+        }
+      }
       this.refreshAll();
+      this.updateModeButtonStyles();
     });
 
     this.sideSel.addEventListener('change', () => {
@@ -272,6 +287,18 @@ export class App {
   updateSwitchButtonText(){
     const next = (this.sideSel.value === 'white') ? 'black' : 'white';
     this.switchBtn.textContent = `Switch to ${next} and restart`;
+  }
+
+  setMode(mode){
+    if (this.modeSel.value === mode) return;
+    this.modeSel.value = mode;
+    this.modeSel.dispatchEvent(new Event('change'));
+  }
+
+  updateModeButtonStyles(){
+    this.modeBtns?.forEach(btn => {
+      btn.classList.toggle('primary', btn.dataset.mode === this.modeSel.value);
+    });
   }
 
   // === Review hotkeys & click-to-exit ===
