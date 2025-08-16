@@ -1,8 +1,8 @@
 import { Chess } from '../vendor/chess.mjs';
 
 // Accepts various shapes:
-// - Lichess daily/byId: { puzzle:{ id, fen, solution:[uci...]|"uci...", moves:[uci...]|"uci...", rating, themes, gameId? }, game:{ id? } }
-// - Our CSV/JSON:       { id, fen, solution:[uci...]|"uci...", moves:[uci...]|"uci...", rating, themes, gameUrl }
+// - Lichess daily/byId: { puzzle:{ id, fen, solution:[uci...], rating, themes, gameId? }, game:{ id? } }
+// - Our CSV/JSON:       { id, fen, moves:"uci uci ...", rating, themes, gameUrl }
 // - Already adapted:    { id, fen, solutionSan:[...], ... }
 export function adaptLichessPuzzle(input){
   // Already adapted?
@@ -52,11 +52,8 @@ function normaliseToFenAndUci(src){
     const p = src.puzzle || {};
     const g = src.game || {};
     const fen = p.fen || src.fen || '';
-    const uciList =
-      Array.isArray(p.solution) ? p.solution.slice() :
-      typeof p.solution === 'string' ? p.solution.trim().split(/\s+/) :
-      Array.isArray(p.moves) ? p.moves.slice() :
-      typeof p.moves === 'string' ? p.moves.trim().split(/\s+/) : [];
+    const uciList = Array.isArray(p.solution) ? p.solution.slice()
+                  : typeof p.moves === 'string' ? p.moves.trim().split(/\s+/) : [];
     const gameUrl = g.id ? `https://lichess.org/${g.id}` : (src.gameUrl || '');
     return { id: p.id, fen, uciList, rating: p.rating, themes: p.themes, gameUrl };
   }
@@ -65,8 +62,6 @@ function normaliseToFenAndUci(src){
   const fen = src.fen || '';
   const uciList =
     Array.isArray(src.solution) ? src.solution.slice() :
-    typeof src.solution === 'string' ? src.solution.trim().split(/\s+/) :
-    Array.isArray(src.moves) ? src.moves.slice() :
     typeof src.moves === 'string' ? src.moves.trim().split(/\s+/) : [];
   return { id: src.id, fen, uciList, rating: src.rating, themes: src.themes, gameUrl: src.gameUrl };
 }
