@@ -124,6 +124,8 @@ export class App {
       onMove: (mv) => this.playMoveSound(mv),
       onPuzzleLoad: (turn) => {
         this.sideSel.value = turn === "w" ? "white" : "black";
+        this.gameOver = false;
+        this.applyOrientation();
         this.updateSwitchButtonText();
       },
     });
