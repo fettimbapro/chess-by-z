@@ -479,6 +479,25 @@
       <div class="stack">
         <!-- BOARD FIRST -->
         <div class="board-area">
+          <div id="puzzleTop" style="display: none">
+            <div class="row">
+              <label>Opening</label>
+              <select id="openingFilter" style="flex: 1"></select>
+            </div>
+            <div class="row">
+              <label>Difficulty</label>
+              <input
+                type="range"
+                id="difficultyRange"
+                min="1"
+                max="10"
+                value="5"
+              />
+              <span class="muted" id="difficultyLabel">Medium</span>
+            </div>
+            <div class="muted" id="puzzleInfo">—</div>
+            <div class="status" id="puzzleStatus"></div>
+          </div>
           <div class="player-clock black" id="clockBlack">05:00</div>
           <div class="board-wrap">
             <div class="evalbar" id="evalbar">
@@ -508,6 +527,12 @@
             </div>
           </div>
           <div class="player-clock white" id="clockWhite">05:00</div>
+          <div class="row" id="puzzleBottom" style="display: none">
+            <button id="fetchDaily">Daily</button>
+            <button id="startPuzzle">New</button>
+            <button id="nextPuzzle">Next</button>
+            <button id="puzzleHint">Hint</button>
+          </div>
         </div>
 
         <!-- CONTROLS UNDER THE BOARD -->
@@ -623,32 +648,6 @@
         </div>
 
         <!-- Puzzles -->
-        <div class="card" id="puzzlePanel" style="display: none">
-          <h3>Puzzles</h3>
-          <div class="row">
-            <button id="fetchDaily">Daily</button>
-            <button id="startPuzzle">New</button>
-            <button id="nextPuzzle">Next</button>
-            <button id="puzzleHint">Hint</button>
-          </div>
-          <div class="row">
-            <label>Opening</label>
-            <select id="openingFilter" style="flex: 1"></select>
-          </div>
-          <div class="row">
-            <label>Difficulty</label>
-            <input
-              type="range"
-              id="difficultyRange"
-              min="1"
-              max="10"
-              value="5"
-            />
-            <span class="muted" id="difficultyLabel">Medium</span>
-          </div>
-          <div class="muted" id="puzzleInfo">—</div>
-          <div class="status" id="puzzleStatus"></div>
-        </div>
       </div>
       <footer class="site-footer">
         <p>
