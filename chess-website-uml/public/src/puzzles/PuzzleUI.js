@@ -37,6 +37,7 @@ export class PuzzleUI {
     this.onPuzzleLoad = onPuzzleLoad || (() => {});
     this.current = null;
     this.index = 0;
+    this.autoplayFirst = false;
 
     this.bindDom();
     this.populateOpenings();
@@ -54,6 +55,7 @@ export class PuzzleUI {
   }
   resetProgress() {
     this.index = 0;
+    this.autoplayFirst = false;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
   }
 
@@ -106,7 +108,7 @@ export class PuzzleUI {
         alert("No puzzle matches your filter.");
         return;
       }
-      await this.loadConvertedPuzzle(p);
+      await this.loadConvertedPuzzle({ ...p, autoplayFirst: true });
     } catch (e) {
       alert("Failed to load puzzle: " + e.message);
     }
@@ -117,6 +119,7 @@ export class PuzzleUI {
       const c = await adaptOrIdentity(p);
       this.current = c;
       this.index = 0;
+      this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
     } catch (e) {
       alert("Failed to convert puzzle: " + e.message);
@@ -127,6 +130,15 @@ export class PuzzleUI {
     if (!this.current) return;
     this.game.load?.(this.current.fen);
     this.ui.clearArrow?.();
+
+    if (this.autoplayFirst && this.current.solutionSan?.length > 0) {
+      const first = this.current.solutionSan[0];
+      const applied = this.game.moveSan?.(first);
+      if (applied) {
+        this.onMove(applied);
+        this.index = 1;
+      }
+    }
 
     if (this.dom?.puzzleInfo) {
       const rating = this.current.rating ? ` — ${this.current.rating}` : "";
