@@ -96,7 +96,7 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
     .confetti-root { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:5; }
     .confetti-piece {
       position:absolute;
-      width:8px; height:8px;
+      width:12px; height:12px;
       opacity:.95;
       transform: translate(-50%, -50%);
       animation: confetti-explode 1.2s ease-out forwards;
@@ -773,10 +773,7 @@ export class BoardUI {
     if (!from || !to || from === to || !this.dragTargets.has(to)) return;
 
     const piece = this.getPieceAt(from);
-    if (
-      piece?.type === "p" &&
-      (to[1] === "8" || to[1] === "1")
-    ) {
+    if (piece?.type === "p" && (to[1] === "8" || to[1] === "1")) {
       this.promptPromotion(from, to, piece.color);
     } else {
       const ok = this.onUserMove({ from, to });
@@ -838,10 +835,7 @@ export class BoardUI {
       // Move if selected and target is legal
       if (this.selected && this.dragTargets.has(sq)) {
         const pieceSel = this.getPieceAt(this.selected);
-        if (
-          pieceSel?.type === "p" &&
-          (sq[1] === "8" || sq[1] === "1")
-        ) {
+        if (pieceSel?.type === "p" && (sq[1] === "8" || sq[1] === "1")) {
           this.promptPromotion(this.selected, sq, pieceSel.color);
         } else {
           const ok = this.onUserMove({ from: this.selected, to: sq });
@@ -963,7 +957,7 @@ export class BoardUI {
       ? this.squareCenterPx(square)
       : { x: this.boardEl.clientWidth / 2, y: this.boardEl.clientHeight / 2 };
     const colors = ["#e74c3c", "#f1c40f", "#2ecc71", "#3498db", "#9b59b6"];
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 200; i++) {
       const piece = document.createElement("div");
       piece.className = "confetti-piece";
       piece.style.left = `${origin.x}px`;
@@ -971,7 +965,7 @@ export class BoardUI {
       piece.style.backgroundColor =
         colors[Math.floor(Math.random() * colors.length)];
       const angle = Math.random() * Math.PI * 2;
-      const distance = 80 + Math.random() * 120;
+      const distance = 120 + Math.random() * 160;
       piece.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
       piece.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
       piece.style.animationDelay = (Math.random() * 0.2).toFixed(2) + "s";
