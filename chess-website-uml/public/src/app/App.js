@@ -813,6 +813,11 @@ export class App {
   maybeCelebrate() {
     if (this.inReview) return; // never in review
     const ply = this.getSanHistory().length;
+    const solvedPuzzle =
+      this.modeSel.value === "puzzle" &&
+      this.puzzles?.current &&
+      this.puzzles.index >= (this.puzzles.current.solutionSan?.length || 0);
+
     if (this.isMateNow() && this.lastCelebrationPly !== ply) {
       this.lastCelebrationPly = ply;
       let kingSq = null;
@@ -832,6 +837,10 @@ export class App {
       } catch {}
       this.sounds.play("airhorn");
       this.ui.celebrate?.(kingSq);
+    } else if (solvedPuzzle && this.lastCelebrationPly !== ply) {
+      this.lastCelebrationPly = ply;
+      this.sounds.play("airhorn");
+      this.ui.celebrate?.();
     }
   }
 }
