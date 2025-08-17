@@ -147,7 +147,11 @@ export class PuzzleUI {
         : "";
       this.dom.puzzleInfo.innerHTML = `<b>Puzzle</b> #${this.current.id || "local"}${rating}${opening}`;
     }
-    if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
+    if (this.dom?.puzzleStatus) {
+      const turn = this.game.turn?.();
+      const text = turn === "w" ? "White to move" : "Black to move";
+      this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">${text}</span>`;
+    }
 
     this.onPuzzleLoad(this.game.turn?.());
     this.onStateChanged();
