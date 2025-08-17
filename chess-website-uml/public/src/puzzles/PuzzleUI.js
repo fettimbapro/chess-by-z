@@ -86,8 +86,7 @@ export class PuzzleUI {
     });
 
     const loadFiltered = () => this.loadFilteredRandom();
-    on(d.startPuzzleBtn, "click", loadFiltered);
-    on(d.nextPuzzleBtn, "click", loadFiltered);
+    on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
 
     const updateDiff = () => {
