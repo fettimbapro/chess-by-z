@@ -48,6 +48,13 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
     .dragPiece.glyph.piece-b {
       font-size: calc(var(--cell) * 0.88);
     }
+    /* Make kings and queens larger for easier identification */
+    .sq .glyph.piece-k,
+    .dragPiece.glyph.piece-k,
+    .sq .glyph.piece-q,
+    .dragPiece.glyph.piece-q {
+      font-size: calc(var(--cell) * 0.94);
+    }
     /* Inverted outlines + fill color per side */
     .sq.pw .glyph { color: #fff; }       /* white piece: white fill */
     .sq.pb .glyph { color: #0b0b0b; }    /* black piece: black fill */
