@@ -42,10 +42,10 @@ export class PuzzleService {
       }
       return null;
     } else {
-      const fileIdx = Math.max(
-        1,
-        Math.min(37, Math.round((difficulty / 10) * 37)),
-      );
+      const target = (min + max) / 2;
+      const step = 2400 / 37;
+      const idx = Math.round((target - 400) / step) + 1;
+      const fileIdx = Math.max(1, Math.min(37, idx));
       const file = String(fileIdx).padStart(3, "0");
       const arr = await this.loadCsv(
         `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
