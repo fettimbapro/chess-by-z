@@ -103,7 +103,10 @@ export class App {
       ui: this.ui,
       service: this.puzzleService,
       dom: {
-        panel: qs("#puzzlePanel"),
+        panelTop: qs("#puzzleTop"),
+        panelBottom: qs("#puzzleBottom"),
+        clockBlack: qs("#clockBlack"),
+        clockWhite: qs("#clockWhite"),
         fetchDailyBtn: qs("#fetchDaily"),
         startPuzzleBtn: qs("#startPuzzle"),
         nextPuzzleBtn: qs("#nextPuzzle"),
@@ -228,6 +231,7 @@ export class App {
         }
       }
       this.refreshAll();
+      this.applyOrientation();
       this.updateModeButtonStyles();
     });
 
@@ -305,7 +309,12 @@ export class App {
   applyOrientation() {
     const side = this.sideSel.value;
     this.ui.setOrientation(side);
-    this.boardArea.classList.toggle("flipped", side === "black");
+    const mode = this.modeSel?.value || "play";
+    if (mode === "puzzle") {
+      this.boardArea.classList.remove("flipped");
+    } else {
+      this.boardArea.classList.toggle("flipped", side === "black");
+    }
   }
 
   startNewGame() {

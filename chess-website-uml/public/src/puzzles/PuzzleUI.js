@@ -43,7 +43,14 @@ export class PuzzleUI {
   }
 
   show(flag) {
-    if (this.dom?.panel) this.dom.panel.style.display = flag ? "" : "none";
+    if (this.dom?.panelTop)
+      this.dom.panelTop.style.display = flag ? "" : "none";
+    if (this.dom?.panelBottom)
+      this.dom.panelBottom.style.display = flag ? "" : "none";
+    if (this.dom?.clockBlack)
+      this.dom.clockBlack.style.display = flag ? "none" : "";
+    if (this.dom?.clockWhite)
+      this.dom.clockWhite.style.display = flag ? "none" : "";
   }
   resetProgress() {
     this.index = 0;
