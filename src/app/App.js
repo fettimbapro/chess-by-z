@@ -118,6 +118,8 @@ export class App {
         difficultyLabel: qs("#difficultyLabel"),
         puzzleInfo: qs("#puzzleInfo"),
         puzzleStatus: qs("#puzzleStatus"),
+        puzzleCount: qs("#puzzleCount"),
+        puzzlePrompt: qs("#puzzlePrompt"),
       },
       onStateChanged: () => {
         this.syncBoard();
