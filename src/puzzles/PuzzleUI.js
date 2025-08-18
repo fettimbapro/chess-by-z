@@ -1,5 +1,6 @@
 import { Chess } from "../vendor/chess.mjs";
 import { adaptLichessPuzzle } from "./PuzzleModel.js";
+import { diffToRange } from "./PuzzleService.js";
 
 function on(el, type, fn) {
   if (el) el.addEventListener(type, fn);
@@ -94,8 +95,10 @@ export class PuzzleUI {
 
     const updateDiff = () => {
       const val = parseInt(d.difficultyRange?.value || "5", 10);
-      if (d.difficultyLabel)
-        d.difficultyLabel.textContent = DIFF_LABELS[val - 1] || "";
+      if (d.difficultyLabel) {
+        const [min, max] = diffToRange(val);
+        d.difficultyLabel.textContent = `${DIFF_LABELS[val - 1] || ""} (${min}-${max})`;
+      }
     };
     on(d.difficultyRange, "input", updateDiff);
     updateDiff();
