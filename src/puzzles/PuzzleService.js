@@ -102,7 +102,7 @@ export class PuzzleService {
   }
 }
 
-function diffToRange(level) {
+export function diffToRange(level) {
   const base = 400;
   const step = 300;
   const min = base + (level - 1) * step;
