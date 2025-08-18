@@ -6,7 +6,8 @@ import { Game } from "../chess-website-uml/public/src/core/Game.js";
 test("prompts for new puzzle when solved", () => {
   const game = new Game();
   let clickHandler;
-  const puzzleStatus = {
+  const puzzlePrompt = {
+    style: {},
     innerHTML: "",
     querySelector() {
       return {
@@ -20,7 +21,7 @@ test("prompts for new puzzle when solved", () => {
     game,
     ui: { clearArrow() {}, drawArrowUci() {} },
     service: {},
-    dom: { puzzleStatus },
+    dom: { puzzlePrompt },
   });
   puzzles.current = { solutionSan: ["e4"] };
   puzzles.index = 0;
@@ -34,8 +35,9 @@ test("prompts for new puzzle when solved", () => {
   assert.ok(mv);
   const res = puzzles.handleUserMove(mv);
   assert.equal(res, true);
-  assert.match(puzzleStatus.innerHTML, /Solved/);
-  assert.match(puzzleStatus.innerHTML, /button/);
+  assert.equal(puzzlePrompt.style.display, "flex");
+  assert.match(puzzlePrompt.innerHTML, /Solved/);
+  assert.match(puzzlePrompt.innerHTML, /button/);
 
   clickHandler();
   assert.equal(nextCalled, true);
