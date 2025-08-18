@@ -159,16 +159,6 @@ export class PuzzleUI {
 
   bindDom() {
     const d = this.dom;
-
-    on(d.fetchDailyBtn, "click", async () => {
-      try {
-        const p = await this.svc.fetchDaily();
-        this.loadConvertedPuzzle(p);
-      } catch (e) {
-        alert("Daily fetch failed: " + e.message);
-      }
-    });
-
     const loadFiltered = () => this.loadFilteredRandom();
     on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
@@ -247,7 +237,7 @@ export class PuzzleUI {
   async loadConvertedPuzzle(p) {
     try {
       const c = await adaptOrIdentity(p);
-      this.current = c;
+      this.current = { ...c, daily: p.daily };
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
@@ -275,7 +265,10 @@ export class PuzzleUI {
       const opening = this.current.opening
         ? ` — <span class="muted">${this.current.opening.replace(/_/g, " ")}</span>`
         : "";
-      this.dom.puzzleInfo.innerHTML = `<b>Puzzle</b> #${this.current.id || "local"}${rating}${opening}`;
+      const label = this.current.daily ? "Daily puzzle" : "Puzzle";
+      this.dom.puzzleInfo.innerHTML = `<b>${label}</b> #${
+        this.current.id || "local"
+      }${rating}${opening}`;
     }
     if (this.dom?.puzzleStatus) {
       const turn = this.game.turn?.();
