@@ -355,8 +355,31 @@
         transform: translateY(-50%);
         white-space: nowrap;
       }
-      #difficultyRange:disabled {
+      #difficultySlider {
+        position: relative;
+        flex: 1;
+        height: 24px;
+      }
+      #difficultySlider input[type="range"] {
+        position: absolute;
+        left: 0;
+        width: 100%;
+        pointer-events: none;
+        background: none;
+      }
+      #difficultySlider input[type="range"]::-webkit-slider-thumb {
+        pointer-events: all;
+      }
+      #difficultySlider input:disabled {
         opacity: 0.5;
+      }
+      #difficultyRangeFill {
+        position: absolute;
+        top: 50%;
+        height: 4px;
+        background: var(--accent);
+        transform: translateY(-50%);
+        pointer-events: none;
       }
       @media (max-width: 600px) {
         #difficultyRow {
@@ -556,13 +579,23 @@
                 Difficulty
                 <input type="checkbox" id="difficultyFilter" checked />
               </label>
-              <input
-                type="range"
-                id="difficultyRange"
-                min="1"
-                max="10"
-                value="5"
-              />
+              <div id="difficultySlider">
+                <div id="difficultyRangeFill"></div>
+                <input
+                  type="range"
+                  id="difficultyMin"
+                  min="1"
+                  max="10"
+                  value="5"
+                />
+                <input
+                  type="range"
+                  id="difficultyMax"
+                  min="1"
+                  max="10"
+                  value="5"
+                />
+              </div>
               <span class="muted" id="difficultyLabel">Medium (1600-1900)</span>
             </div>
           </div>

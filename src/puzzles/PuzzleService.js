@@ -21,9 +21,25 @@ export class PuzzleService {
     return this.openingsIndex;
   }
 
-  async randomFiltered({ difficulty, opening = "", themes = [] } = {}) {
-    let min, max;
-    if (difficulty != null) [min, max] = diffToRange(difficulty);
+  async randomFiltered({
+    difficulty,
+    difficultyMin,
+    difficultyMax,
+    opening = "",
+    themes = [],
+  } = {}) {
+    if (Array.isArray(difficulty)) {
+      [difficultyMin, difficultyMax] = difficulty;
+    }
+    let min,
+      max,
+      diffEnabled = difficultyMin != null || difficultyMax != null;
+    if (diffEnabled) {
+      [min] =
+        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
+      [, max] =
+        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
+    }
     const themeList = Array.isArray(themes)
       ? themes.filter(Boolean)
       : String(themes)
@@ -46,7 +62,7 @@ export class PuzzleService {
         );
         const matches = arr.filter(
           (p) =>
-            (difficulty == null || (p.rating >= min && p.rating <= max)) &&
+            (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
             String(p.openingTags || "").includes(opening) &&
             byTheme(p),
         );
@@ -56,7 +72,7 @@ export class PuzzleService {
       return null;
     } else {
       let fileIdx;
-      if (difficulty == null) {
+      if (!diffEnabled) {
         fileIdx = ((Math.random() * 37) | 0) + 1;
       } else {
         const target = (min + max) / 2;
@@ -70,8 +86,7 @@ export class PuzzleService {
       );
       const matches = arr.filter(
         (p) =>
-          (difficulty == null || (p.rating >= min && p.rating <= max)) &&
-          byTheme(p),
+          (!diffEnabled || (p.rating >= min && p.rating <= max)) && byTheme(p),
       );
       if (!matches.length) return null;
       return matches[(Math.random() * matches.length) | 0];
