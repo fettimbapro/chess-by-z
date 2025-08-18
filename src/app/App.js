@@ -193,6 +193,7 @@ export class App {
     this.syncBoard();
     this.refreshAll();
     this.updateModeButtonStyles();
+    this.updateSwitchButtonVisibility();
 
     // Do NOT start clocks yet; only after the human makes their first move.
     if (this.modeSel.value === "play") {
@@ -236,6 +237,7 @@ export class App {
       this.refreshAll();
       this.applyOrientation();
       this.updateModeButtonStyles();
+      this.updateSwitchButtonVisibility();
     });
 
     this.sideSel.addEventListener("change", () => {
@@ -339,6 +341,15 @@ export class App {
     } else if (this.modeSel.value === "puzzle") {
       this.puzzles.resetProgress();
       this.clockPanel.pause();
+    }
+  }
+
+  updateSwitchButtonVisibility() {
+    const show = this.modeSel.value === "play";
+    this.switchBtn.parentElement.style.display = show ? "" : "none";
+    if (!show) {
+      this.confirmRestart = false;
+      this.switchBtn.classList.remove("confirm");
     }
   }
 
