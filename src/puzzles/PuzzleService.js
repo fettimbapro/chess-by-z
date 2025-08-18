@@ -27,6 +27,7 @@ export class PuzzleService {
     difficultyMax,
     opening = "",
     themes = [],
+    excludeIds = [],
   } = {}) {
     if (Array.isArray(difficulty)) {
       [difficultyMin, difficultyMax] = difficulty;
@@ -52,10 +53,16 @@ export class PuzzleService {
           .toLowerCase()
           .includes(t.toLowerCase()),
       );
+    const excludeSet = new Set(
+      Array.isArray(excludeIds)
+        ? excludeIds.filter(Boolean)
+        : [excludeIds].filter(Boolean),
+    );
     if (opening) {
       const idx = await this.listOpenings();
       const files = idx[opening];
       if (!files || !files.length) return null;
+      const fallback = [];
       for (const f of files) {
         const arr = await this.loadCsv(
           `./lib/lichess_puzzle_db/opening_sort/lichess_db_puzzle_by_opening.${f}.csv`,
@@ -66,10 +73,16 @@ export class PuzzleService {
             String(p.openingTags || "").includes(opening) &&
             byTheme(p),
         );
-        if (matches.length)
-          return matches[(Math.random() * matches.length) | 0];
+        const filtered = excludeSet.size
+          ? matches.filter((p) => !excludeSet.has(p.id))
+          : matches;
+        if (filtered.length)
+          return filtered[(Math.random() * filtered.length) | 0];
+        fallback.push(...matches);
       }
-      return null;
+      return fallback.length
+        ? fallback[(Math.random() * fallback.length) | 0]
+        : null;
     } else {
       let fileIdx;
       if (!diffEnabled) {
@@ -89,7 +102,11 @@ export class PuzzleService {
           (!diffEnabled || (p.rating >= min && p.rating <= max)) && byTheme(p),
       );
       if (!matches.length) return null;
-      return matches[(Math.random() * matches.length) | 0];
+      const filtered = excludeSet.size
+        ? matches.filter((p) => !excludeSet.has(p.id))
+        : matches;
+      const pool = filtered.length ? filtered : matches;
+      return pool[(Math.random() * pool.length) | 0];
     }
   }
 
