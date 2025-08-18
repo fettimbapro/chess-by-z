@@ -355,6 +355,9 @@
         transform: translateY(-50%);
         white-space: nowrap;
       }
+      #difficultyRange:disabled {
+        opacity: 0.5;
+      }
       .button-row {
         justify-content: center;
       }
@@ -536,7 +539,10 @@
               <select id="themeFilter" style="flex: 1"></select>
             </div>
             <div class="row" id="difficultyRow">
-              <label>Difficulty</label>
+              <label>
+                <input type="checkbox" id="difficultyFilter" checked />
+                Difficulty
+              </label>
               <input
                 type="range"
                 id="difficultyRange"

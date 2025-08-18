@@ -21,8 +21,9 @@ export class PuzzleService {
     return this.openingsIndex;
   }
 
-  async randomFiltered({ difficulty = 5, opening = "", themes = [] } = {}) {
-    const [min, max] = diffToRange(difficulty);
+  async randomFiltered({ difficulty, opening = "", themes = [] } = {}) {
+    let min, max;
+    if (difficulty != null) [min, max] = diffToRange(difficulty);
     const themeList = Array.isArray(themes)
       ? themes.filter(Boolean)
       : String(themes)
@@ -45,8 +46,7 @@ export class PuzzleService {
         );
         const matches = arr.filter(
           (p) =>
-            p.rating >= min &&
-            p.rating <= max &&
+            (difficulty == null || (p.rating >= min && p.rating <= max)) &&
             String(p.openingTags || "").includes(opening) &&
             byTheme(p),
         );
@@ -55,16 +55,23 @@ export class PuzzleService {
       }
       return null;
     } else {
-      const target = (min + max) / 2;
-      const step = 2400 / 37;
-      const idx = Math.round((target - 400) / step) + 1;
-      const fileIdx = Math.max(1, Math.min(37, idx));
+      let fileIdx;
+      if (difficulty == null) {
+        fileIdx = ((Math.random() * 37) | 0) + 1;
+      } else {
+        const target = (min + max) / 2;
+        const step = 2400 / 37;
+        const idx = Math.round((target - 400) / step) + 1;
+        fileIdx = Math.max(1, Math.min(37, idx));
+      }
       const file = String(fileIdx).padStart(3, "0");
       const arr = await this.loadCsv(
         `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
       );
       const matches = arr.filter(
-        (p) => p.rating >= min && p.rating <= max && byTheme(p),
+        (p) =>
+          (difficulty == null || (p.rating >= min && p.rating <= max)) &&
+          byTheme(p),
       );
       if (!matches.length) return null;
       return matches[(Math.random() * matches.length) | 0];
