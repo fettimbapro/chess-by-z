@@ -358,6 +358,19 @@
       #difficultyRange:disabled {
         opacity: 0.5;
       }
+      @media (max-width: 600px) {
+        #difficultyRow {
+          position: static;
+        }
+        #difficultyLabel {
+          position: static;
+          margin-left: 0;
+          margin-top: 8px;
+          transform: none;
+          white-space: normal;
+          flex-basis: 100%;
+        }
+      }
       .button-row {
         justify-content: center;
       }
