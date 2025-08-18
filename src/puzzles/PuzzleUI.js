@@ -111,6 +111,7 @@ export class PuzzleUI {
     this.bindDom();
     this.populateOpenings();
     this.populateThemes();
+    this.updateFilterCount();
   }
 
   show(flag) {
@@ -128,6 +129,7 @@ export class PuzzleUI {
     this.autoplayFirst = false;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
     this.clearHint();
+    this.updateFilterCount();
   }
 
   async populateOpenings() {
@@ -163,6 +165,9 @@ export class PuzzleUI {
     const loadFiltered = () => this.loadFilteredRandom();
     on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
+
+    on(d.openingSel, "change", () => this.updateFilterCount());
+    on(d.themeSel, "change", () => this.updateFilterCount());
 
     const updateDiffLabel = (src) => {
       let minVal = parseInt(d.difficultyMin?.value || "1", 10);
@@ -202,10 +207,17 @@ export class PuzzleUI {
         d.difficultyTrack.style.display = enabled ? "" : "none";
       if (enabled) updateDiffLabel();
       else if (d.difficultyLabel) d.difficultyLabel.textContent = "Any";
+      this.updateFilterCount();
     };
     on(d.difficultyFilter, "change", syncDiffEnabled);
-    on(d.difficultyMin, "input", () => updateDiffLabel("min"));
-    on(d.difficultyMax, "input", () => updateDiffLabel("max"));
+    on(d.difficultyMin, "input", () => {
+      updateDiffLabel("min");
+      this.updateFilterCount();
+    });
+    on(d.difficultyMax, "input", () => {
+      updateDiffLabel("max");
+      this.updateFilterCount();
+    });
     syncDiffEnabled();
   }
 
@@ -247,8 +259,37 @@ export class PuzzleUI {
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
+      this.updateFilterCount();
     } catch (e) {
       alert("Failed to convert puzzle: " + e.message);
+    }
+  }
+
+  async updateFilterCount() {
+    if (!this.dom?.puzzleCount) return;
+    try {
+      const diffEnabled = this.dom.difficultyFilter?.checked;
+      const diffMin = diffEnabled
+        ? parseInt(this.dom.difficultyMin?.value || "1", 10)
+        : null;
+      const diffMax = diffEnabled
+        ? parseInt(this.dom.difficultyMax?.value || "10", 10)
+        : null;
+      const opening = this.dom.openingSel?.value || "";
+      const theme = this.dom.themeSel?.value || "";
+      const themes = theme ? [theme] : [];
+      const opts = {
+        opening,
+        themes,
+        excludeIds: Array.from(this.seenIds),
+      };
+      if (diffMin !== null) opts.difficultyMin = diffMin;
+      if (diffMax !== null) opts.difficultyMax = diffMax;
+      const count = await this.svc.countFiltered(opts);
+      const noun = count === 1 ? "puzzle" : "puzzles";
+      this.dom.puzzleCount.textContent = `${count} ${noun} fit your filter`;
+    } catch {
+      this.dom.puzzleCount.textContent = "";
     }
   }
 
