@@ -307,8 +307,7 @@ export class PuzzleUI {
       if (this.dom?.puzzleStatus)
         this.dom.puzzleStatus.innerHTML = `<span style="color:#39d98a">Correct!</span>`;
       if (this.index >= (this.current?.solutionSan?.length || 0)) {
-        if (this.dom?.puzzleStatus)
-          this.dom.puzzleStatus.innerHTML = `<span style="color:#39d98a">Solved 🎉</span>`;
+        this.promptNewPuzzle();
         return true;
       } else {
         const reply = this.current.solutionSan[this.index];
@@ -331,6 +330,15 @@ export class PuzzleUI {
       this.game.undo();
       return false;
     }
+  }
+
+  promptNewPuzzle() {
+    if (!this.dom?.puzzleStatus) return;
+    this.dom.puzzleStatus.innerHTML =
+      `<span style="color:#39d98a">Solved 🎉</span>` +
+      '<button id="nextPuzzle" style="margin-left:8px">New Puzzle?</button>';
+    const btn = this.dom.puzzleStatus.querySelector("#nextPuzzle");
+    on(btn, "click", () => this.loadFilteredRandom());
   }
 
   hint() {
