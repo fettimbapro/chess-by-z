@@ -10,7 +10,15 @@
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 // Use the *black* glyph codepoints for BOTH sides (solid shapes)
-const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+// Append U+FE0E (text presentation) to avoid emoji glyphs on iOS Safari
+const BLACK_GLYPH = {
+  k: "♚\uFE0E",
+  q: "♛\uFE0E",
+  r: "♜\uFE0E",
+  b: "♝\uFE0E",
+  n: "♞\uFE0E",
+  p: "♟\uFE0E",
+};
 
 // ---------------- CSS injection ----------------
 (function injectStyle() {
