@@ -28,18 +28,21 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
       display: inline-block;
       line-height: 1;
       font-size: calc(var(--cell) * 0.82);
+      --glyph-outline-width: max(0.6px, calc(var(--cell) * 0.01));
       /* Outline color is provided via --glyph-outline (set by piece color) */
-      -webkit-text-stroke: max(0.6px, calc(var(--cell) * 0.01)) var(--glyph-outline, #000);
+      -webkit-text-stroke: var(--glyph-outline-width) var(--glyph-outline, #000);
       /* Fallback outline using layered text-shadows (thinner than before) */
       text-shadow:
-        0  0.6px  var(--glyph-outline, #000),
-        0.6px 0   var(--glyph-outline, #000),
-        0 -0.6px  var(--glyph-outline, #000),
-       -0.6px 0   var(--glyph-outline, #000),
-        0.6px 0.6px var(--glyph-outline, #000),
-        0.6px -0.6px var(--glyph-outline, #000),
-       -0.6px 0.6px var(--glyph-outline, #000),
-       -0.6px -0.6px var(--glyph-outline, #000);
+        0 var(--glyph-outline-width) var(--glyph-outline, #000),
+        var(--glyph-outline-width) 0 var(--glyph-outline, #000),
+        0 calc(var(--glyph-outline-width) * -1) var(--glyph-outline, #000),
+        calc(var(--glyph-outline-width) * -1) 0 var(--glyph-outline, #000),
+        var(--glyph-outline-width) var(--glyph-outline-width) var(--glyph-outline, #000),
+        var(--glyph-outline-width) calc(var(--glyph-outline-width) * -1) var(--glyph-outline, #000),
+        calc(var(--glyph-outline-width) * -1) var(--glyph-outline-width) var(--glyph-outline, #000),
+        calc(var(--glyph-outline-width) * -1)
+          calc(var(--glyph-outline-width) * -1)
+          var(--glyph-outline, #000);
       pointer-events: none;
       user-select: none;
     }
@@ -59,11 +62,11 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
     .sq.pw .glyph { color: #fff; }       /* white piece: white fill */
     .sq.pb .glyph { color: #0b0b0b; }    /* black piece: black fill */
     .sq.pw { --glyph-outline: #000; }    /* white piece gets black outline */
-    .sq.pb { --glyph-outline: #fff; }    /* black piece gets white outline */
+    .sq.pb { --glyph-outline: #fff; --glyph-outline-width: max(0.3px, calc(var(--cell) * 0.005)); }    /* black piece gets white outline */
 
     /* Drag ghost adopts same rules by adding .pw/.pb on the ghost element */
     .dragPiece.glyph.pw { --glyph-outline: #000; color: #fff; }
-    .dragPiece.glyph.pb { --glyph-outline: #fff; color: #0b0b0b; }
+    .dragPiece.glyph.pb { --glyph-outline: #fff; color: #0b0b0b; --glyph-outline-width: max(0.3px, calc(var(--cell) * 0.005)); }
 
     /* Legal move dots */
     .sq .dot {
