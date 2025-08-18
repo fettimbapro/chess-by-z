@@ -359,16 +359,31 @@
         position: relative;
         flex: 1;
         height: 24px;
+        background: var(--square-dark);
       }
       #difficultySlider input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
         position: absolute;
         left: 0;
         width: 100%;
         pointer-events: none;
         background: none;
       }
-      #difficultySlider input[type="range"]::-webkit-slider-thumb {
+      #difficultySlider input[type="range"]::-webkit-slider-runnable-track,
+      #difficultySlider input[type="range"]::-moz-range-track {
+        background: none;
+      }
+      #difficultySlider input[type="range"]::-webkit-slider-thumb,
+      #difficultySlider input[type="range"]::-moz-range-thumb {
+        -webkit-appearance: none;
+        appearance: none;
         pointer-events: all;
+        background: var(--square-light);
+        border: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
       }
       #difficultySlider input:disabled {
         opacity: 0.5;
@@ -380,6 +395,7 @@
         background: var(--accent);
         transform: translateY(-50%);
         pointer-events: none;
+        z-index: 1;
       }
       @media (max-width: 600px) {
         #difficultyRow {
