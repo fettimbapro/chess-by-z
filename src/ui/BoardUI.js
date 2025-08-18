@@ -28,6 +28,7 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
       display: inline-block;
       line-height: 1;
       font-size: calc(var(--cell) * 0.82);
+      font-variant-emoji: text;
       --glyph-outline-width: max(0.6px, calc(var(--cell) * 0.01));
       /* Outline color is provided via --glyph-outline (set by piece color) */
       -webkit-text-stroke: var(--glyph-outline-width) var(--glyph-outline, #000);
