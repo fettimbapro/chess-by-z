@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { PuzzleUI } from "../chess-website-uml/public/src/puzzles/PuzzleUI.js";
 import { Game } from "../chess-website-uml/public/src/core/Game.js";
 
+globalThis.window = { MoveFlash: { flash() {} } };
+
 const PUZZLE = {
   id: "test",
   fen: "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",

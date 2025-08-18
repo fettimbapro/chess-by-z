@@ -13,28 +13,28 @@
 //
 // API: window.MoveFlash.{attachTo, flash({duration,color}), setColor(color), test()}; alias window.moveflash.
 //
-(function(){
-  'use strict';
+(function () {
+  "use strict";
 
   const CONFIG = {
     duration: 1500,
-    color: 'rgb(160,210,255)',
+    color: "160,210,255",
     peak: 0.55,
-    tailMs: 420,          // length of pointer tail window
-    bulkThreshold: 6      // >= changed squares → treat as reset (no pulse)
+    tailMs: 420, // length of pointer tail window
+    bulkThreshold: 6, // >= changed squares → treat as reset (no pulse)
   };
 
   // ---------- styles ----------
-  function injectStyle(){
-    if (document.getElementById('move-flash-style')) return;
-    const st = document.createElement('style');
-    st.id = 'move-flash-style';
+  function injectStyle() {
+    if (document.getElementById("move-flash-style")) return;
+    const st = document.createElement("style");
+    st.id = "move-flash-style";
     st.textContent = `
-      .mf-host { position: relative; }
+      .mf-host { position: relative; --mf-color: ${CONFIG.color}; }
       @keyframes mfPulse {
-        0%   { box-shadow: 0 0 0 0 rgba(160,210,255, 0); }
-        18%  { box-shadow: 0 0 34px 16px rgba(160,210,255, VAR), 0 0 3px 1px rgba(160,210,255, VAR); }
-        100% { box-shadow: 0 0 0 0 rgba(160,210,255, 0); }
+        0%   { box-shadow: 0 0 0 0 rgba(var(--mf-color), 0); }
+        18%  { box-shadow: 0 0 34px 16px rgba(var(--mf-color), VAR), 0 0 3px 1px rgba(var(--mf-color), VAR); }
+        100% { box-shadow: 0 0 0 0 rgba(var(--mf-color), 0); }
       }
       .mf-pulse { will-change: box-shadow; }
     `.replace(/VAR/g, String(CONFIG.peak));
@@ -42,74 +42,91 @@
   }
 
   // ---------- DOM helpers ----------
-  function findBoard(){
-    const wrap = document.querySelector('.board-wrap');
-    if (wrap){
-      const inside = wrap.querySelector('#board, .board, [data-chess-board], [data-board], [data-board-root]');
+  function findBoard() {
+    const wrap = document.querySelector(".board-wrap");
+    if (wrap) {
+      const inside = wrap.querySelector(
+        "#board, .board, [data-chess-board], [data-board], [data-board-root]",
+      );
       if (inside) return inside;
     }
     return (
-      document.getElementById('board') ||
-      document.querySelector('.board, #chessboard, .board-container, [data-chess-board], [data-board], [data-board-root]')
+      document.getElementById("board") ||
+      document.querySelector(
+        ".board, #chessboard, .board-container, [data-chess-board], [data-board], [data-board-root]",
+      )
     );
   }
-  function findHost(boardEl){
-    return boardEl.closest('.board-wrap') || boardEl.parentElement || boardEl;
+  function findHost(boardEl) {
+    return boardEl.closest(".board-wrap") || boardEl.parentElement || boardEl;
   }
 
   // ---------- occupancy snapshot & diff ----------
-  function colorOfSquare(el){
+  function colorOfSquare(el) {
     // prefer data-piece like "wP"/"bq"
-    const dp = el.getAttribute('data-piece');
+    const dp = el.getAttribute("data-piece");
     if (dp && /^[wb]/i.test(dp)) return dp[0].toLowerCase();
 
     // common class patterns
-    for (const cls of el.classList){
-      if (cls === 'pw' || cls === 'white' || cls === 'w') return 'w';
-      if (cls === 'pb' || cls === 'black' || cls === 'b') return 'b';
+    for (const cls of el.classList) {
+      if (cls === "pw" || cls === "white" || cls === "w") return "w";
+      if (cls === "pb" || cls === "black" || cls === "b") return "b";
     }
 
     // nested piece nodes
-    const pieceChild = el.querySelector('.piece.white, .white, .pw, .piece.black, .black, .pb');
-    if (pieceChild){
-      if (pieceChild.classList.contains('white') || pieceChild.classList.contains('pw')) return 'w';
-      if (pieceChild.classList.contains('black') || pieceChild.classList.contains('pb')) return 'b';
+    const pieceChild = el.querySelector(
+      ".piece.white, .white, .pw, .piece.black, .black, .pb",
+    );
+    if (pieceChild) {
+      if (
+        pieceChild.classList.contains("white") ||
+        pieceChild.classList.contains("pw")
+      )
+        return "w";
+      if (
+        pieceChild.classList.contains("black") ||
+        pieceChild.classList.contains("pb")
+      )
+        return "b";
     }
 
     // text glyphs/letters fallback
-    const txt = el.textContent || '';
+    const txt = el.textContent || "";
     const m = txt.match(/[prnbqkPRNBQK♙♘♗♖♕♔♟♞♝♜♛♚]/);
-    if (m){
+    if (m) {
       const ch = m[0];
       // Assume uppercase/glyph = white, lowercase = black
-      if (/[PRNBQK♙♘♗♖♕♔]/.test(ch)) return 'w';
-      if (/[prnbqk♟♞♝♜♛♚]/.test(ch)) return 'b';
+      if (/[PRNBQK♙♘♗♖♕♔]/.test(ch)) return "w";
+      if (/[prnbqk♟♞♝♜♛♚]/.test(ch)) return "b";
     }
 
     return null;
   }
 
-  function takeSnapshot(boardEl){
+  function takeSnapshot(boardEl) {
     const map = Object.create(null);
-    const nodes = boardEl.querySelectorAll('.sq[data-square]');
-    nodes.forEach(el => {
-      const sq = el.getAttribute('data-square');
+    const nodes = boardEl.querySelectorAll(".sq[data-square]");
+    nodes.forEach((el) => {
+      const sq = el.getAttribute("data-square");
       map[sq] = colorOfSquare(el);
     });
     return map;
   }
 
-  function diffCounts(prev, next){
-    let changed = 0, additions = 0, wAdds = 0, bAdds = 0;
-    for (const sq in next){
+  function diffCounts(prev, next) {
+    let changed = 0,
+      additions = 0,
+      wAdds = 0,
+      bAdds = 0;
+    for (const sq in next) {
       const a = prev[sq] || null;
       const b = next[sq] || null;
-      if (a !== b){
+      if (a !== b) {
         changed++;
-        if (b){
+        if (b) {
           additions++;
-          if (b === 'w') wAdds++;
-          else if (b === 'b') bAdds++;
+          if (b === "w") wAdds++;
+          else if (b === "b") bAdds++;
         }
       }
     }
@@ -129,42 +146,45 @@
       inDrag: false,
       tailActive: false,
       tailTimer: 0,
-      tailStartSnap: null,   // snapshot at start of tail
-      lastSnap: null,        // last processed snapshot (for general diffs)
+      tailStartSnap: null, // snapshot at start of tail
+      lastSnap: null, // last processed snapshot (for general diffs)
       rafId: 0,
-      awaitingOpponent: false
+      awaitingOpponent: false,
     },
 
-    attachTo(boardEl){
-      try{
+    attachTo(boardEl) {
+      try {
         injectStyle();
         const host = findHost(boardEl);
-        host.classList.add('mf-host');
+        host.classList.add("mf-host");
 
         // initial snapshot (prevents boot pulse)
         this._state.lastSnap = takeSnapshot(boardEl);
 
-        const startTail = ()=>{
+        const startTail = () => {
           clearTimeout(this._state.tailTimer);
           this._state.tailActive = true;
           this._state.tailStartSnap = takeSnapshot(boardEl); // baseline for counting additions inside tail
 
-          this._state.tailTimer = setTimeout(()=>{
+          this._state.tailTimer = setTimeout(() => {
             // End of tail window
             this._state.tailActive = false;
 
             // Compare current board vs tail start to count total additions inside tail
             const nowSnap = takeSnapshot(boardEl);
-            const { changed, additions, wAdds, bAdds } = diffCounts(this._state.tailStartSnap, nowSnap);
+            const { changed, additions, wAdds, bAdds } = diffCounts(
+              this._state.tailStartSnap,
+              nowSnap,
+            );
 
-            if (changed >= CONFIG.bulkThreshold){
+            if (changed >= CONFIG.bulkThreshold) {
               // Reset/init event inside tail → do nothing
               this._state.awaitingOpponent = false;
-            } else if (wAdds && bAdds){
+            } else if (wAdds && bAdds) {
               // Your move + instant book reply happened within tail → flash once now
               this.flash();
               this._state.awaitingOpponent = false;
-            } else if (additions >= 1){
+            } else if (additions >= 1) {
               // Only your move inside tail (including castling) → wait for opponent outside tail
               this._state.awaitingOpponent = true;
             } else {
@@ -178,22 +198,28 @@
         };
 
         // drag boundaries
-        const onDragStart = ()=>{ this._state.inDrag = true; };
-        const onDragEnd   = ()=>{ this._state.inDrag = false; startTail(); };
+        const onDragStart = () => {
+          this._state.inDrag = true;
+        };
+        const onDragEnd = () => {
+          this._state.inDrag = false;
+          startTail();
+        };
 
         // click-to-move: start tail on release
         const onUp = startTail;
 
-        boardEl.addEventListener('dragstart', onDragStart, { capture: true });
-        boardEl.addEventListener('dragend',   onDragEnd,   { capture: true });
-        boardEl.addEventListener('drop',      onDragEnd,   { capture: true });
-        ['pointerup','mouseup','touchend','touchcancel'].forEach(ev =>
-          boardEl.addEventListener(ev, onUp, { passive: true, capture: true }));
+        boardEl.addEventListener("dragstart", onDragStart, { capture: true });
+        boardEl.addEventListener("dragend", onDragEnd, { capture: true });
+        boardEl.addEventListener("drop", onDragEnd, { capture: true });
+        ["pointerup", "mouseup", "touchend", "touchcancel"].forEach((ev) =>
+          boardEl.addEventListener(ev, onUp, { passive: true, capture: true }),
+        );
 
         // observe occupancy changes
-        const obs = new MutationObserver(()=>{
+        const obs = new MutationObserver(() => {
           if (this._state.rafId) return;
-          this._state.rafId = requestAnimationFrame(()=>{
+          this._state.rafId = requestAnimationFrame(() => {
             this._state.rafId = 0;
 
             if (this._state.inDrag) return; // ignore drag churn
@@ -208,18 +234,18 @@
             if (changed === 0) return;
 
             // Suppress resets / New Game / initial layout
-            if (changed >= CONFIG.bulkThreshold){
+            if (changed >= CONFIG.bulkThreshold) {
               this._state.awaitingOpponent = false;
               return;
             }
 
-            if (this._state.tailActive){
+            if (this._state.tailActive) {
               // Inside tail: do nothing now; we'll decide at tail end using tailStartSnap
               return;
             }
 
             // Outside tail: opponent moved (either normal think or book just after tail)
-            if (this._state.awaitingOpponent){
+            if (this._state.awaitingOpponent) {
               this.flash();
               this._state.awaitingOpponent = false;
             } else {
@@ -229,57 +255,71 @@
           });
         });
         obs.observe(boardEl, {
-          subtree:true,
-          childList:true,
-          characterData:true,
-          attributes:true,
-          attributeFilter:['class','data-piece','style']
+          subtree: true,
+          childList: true,
+          characterData: true,
+          attributes: true,
+          attributeFilter: ["class", "data-piece", "style"],
         });
 
         this.host = host;
         this.board = boardEl;
         this.ready = true;
-      }catch(e){
-        console.error('MoveFlash.attachTo failed:', e);
+      } catch (e) {
+        console.error("MoveFlash.attachTo failed:", e);
       }
     },
 
-    flash(opts){
+    flash(opts) {
       opts = opts || {};
-      const dur = typeof opts.duration === 'number' ? opts.duration : this._state.duration;
+      const dur =
+        typeof opts.duration === "number"
+          ? opts.duration
+          : this._state.duration;
       const color = opts.color || this._state.color;
       const host = this.host;
       if (!host) return;
-      host.classList.remove('mf-pulse');
-      host.style.setProperty('--mf-color', color);
-      host.style.animation = 'none';
+      host.classList.remove("mf-pulse");
+      host.style.setProperty("--mf-color", color);
+      host.style.animation = "none";
       // eslint-disable-next-line no-unused-expressions
       host.offsetWidth;
       host.style.animation = `mfPulse ${dur}ms ease-out`;
-      host.classList.add('mf-pulse');
+      host.classList.add("mf-pulse");
     },
 
-    setColor(color){ this._state.color = color || CONFIG.color; },
+    setColor(color) {
+      this._state.color = color || CONFIG.color;
+    },
 
-    test(){ this.setColor('rgb(190,230,255)'); this.flash({ duration: 1500 }); }
+    test() {
+      this.setColor("190,230,255");
+      this.flash({ duration: 1500 });
+    },
   };
 
   window.MoveFlash = API;
   window.moveflash = API;
 
-  function auto(){
+  function auto() {
     injectStyle();
     let board = findBoard();
-    if (board){ API.attachTo(board); return; }
-    const mo = new MutationObserver(()=>{
+    if (board) {
+      API.attachTo(board);
+      return;
+    }
+    const mo = new MutationObserver(() => {
       board = findBoard();
-      if (board){ mo.disconnect(); API.attachTo(board); }
+      if (board) {
+        mo.disconnect();
+        API.attachTo(board);
+      }
     });
-    mo.observe(document.documentElement, { childList:true, subtree:true });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
   }
 
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', auto, { once:true });
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", auto, { once: true });
   } else {
     auto();
   }
