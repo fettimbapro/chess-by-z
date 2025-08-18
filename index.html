@@ -386,8 +386,8 @@
         position: absolute;
         left: 0;
         width: 100%;
-        pointer-events: none;
         background: none;
+        pointer-events: none;
       }
       #difficultySlider input[type="range"]::-webkit-slider-runnable-track,
       #difficultySlider input[type="range"]::-moz-range-track,
@@ -404,6 +404,12 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
+      }
+      #difficultyMin {
+        z-index: 2;
+      }
+      #difficultyMax {
+        z-index: 1;
       }
       #difficultySlider input:disabled {
         opacity: 0.5;
