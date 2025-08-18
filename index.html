@@ -386,19 +386,19 @@
         position: absolute;
         left: 0;
         width: 100%;
-        pointer-events: none;
         background: none;
       }
       #difficultySlider input[type="range"]::-webkit-slider-runnable-track,
       #difficultySlider input[type="range"]::-moz-range-track,
       #difficultySlider input[type="range"]::-moz-range-progress {
         background: none;
+        pointer-events: none;
       }
       #difficultySlider input[type="range"]::-webkit-slider-thumb,
       #difficultySlider input[type="range"]::-moz-range-thumb {
         -webkit-appearance: none;
         appearance: none;
-        pointer-events: all;
+        pointer-events: auto;
         background: var(--square-light);
         border: none;
         width: 16px;
