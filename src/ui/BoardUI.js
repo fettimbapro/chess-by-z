@@ -86,7 +86,8 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
 
     /* Last move, check, and premove highlights */
     .sq.hl-from::after, .sq.hl-to::after, .sq.hl-check::after,
-    .sq.hl-premove-from::after, .sq.hl-premove-to::after {
+    .sq.hl-premove-from::after, .sq.hl-premove-to::after,
+    .sq.hl-hint::after {
       content: ''; position: absolute; inset: 2px; border-radius: 6px; pointer-events: none;
     }
     .sq.hl-from::after      { box-shadow: inset 0 0 0 3px rgba(120,170,255,.35), 0 0 12px 4px rgba(120,170,255,.18); }
@@ -94,6 +95,7 @@ const BLACK_GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"
     .sq.hl-check::after     { box-shadow: inset 0 0 0 3px rgba(255,70,70,.50),   0 0 18px 10px rgba(255,70,70,.25); }
     .sq.hl-premove-from::after { box-shadow: inset 0 0 0 3px rgba(200,120,255,.35), 0 0 12px 4px rgba(200,120,255,.18); }
     .sq.hl-premove-to::after   { box-shadow: inset 0 0 0 3px rgba(200,120,255,.5),  0 0 14px 6px rgba(200,120,255,.22); }
+    .sq.hl-hint::after      { box-shadow: inset 0 0 0 3px rgba(255,215,0,.55), 0 0 14px 6px rgba(255,215,0,.25); }
 
     .sq { position: relative; }
     .sq:active { filter: none !important; }
