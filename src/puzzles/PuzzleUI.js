@@ -126,6 +126,10 @@ export class PuzzleUI {
     this.index = 0;
     this.autoplayFirst = false;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
+    if (this.dom?.puzzlePrompt) {
+      this.dom.puzzlePrompt.style.display = "none";
+      this.dom.puzzlePrompt.innerHTML = "";
+    }
     this.clearHint();
   }
 
@@ -241,6 +245,10 @@ export class PuzzleUI {
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
+      if (this.dom?.puzzlePrompt) {
+        this.dom.puzzlePrompt.style.display = "none";
+        this.dom.puzzlePrompt.innerHTML = "";
+      }
     } catch (e) {
       alert("Failed to convert puzzle: " + e.message);
     }
@@ -326,11 +334,12 @@ export class PuzzleUI {
   }
 
   promptNewPuzzle() {
-    if (!this.dom?.puzzleStatus) return;
-    this.dom.puzzleStatus.innerHTML =
-      `<span style="color:#39d98a">Solved 🎉</span>` +
-      '<button id="nextPuzzle" style="margin-left:8px">New Puzzle?</button>';
-    const btn = this.dom.puzzleStatus.querySelector("#nextPuzzle");
+    if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
+    if (!this.dom?.puzzlePrompt) return;
+    this.dom.puzzlePrompt.innerHTML =
+      '<div class="box"><span style="color:#39d98a">Solved 🎉</span><button id="nextPuzzle">New Puzzle?</button></div>';
+    this.dom.puzzlePrompt.style.display = "flex";
+    const btn = this.dom.puzzlePrompt.querySelector("#nextPuzzle");
     on(btn, "click", () => this.loadFilteredRandom());
   }
 

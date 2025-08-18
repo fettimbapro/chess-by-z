@@ -1,16 +1,57 @@
 /* Clocks and controls */
-.clockRow{display:grid; grid-template-columns: 1fr; gap:10px}
-.clockbar{display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:center}
-.clock{display:flex; align-items:center; justify-content:center; background:#0f141c; border:1px solid #222a36; border-radius:10px; padding:10px; font-weight:600; font-size:16px}
-
-.pill.controls{
-  display:flex; gap:8px; align-items:center;
-  background:var(--layer); border:1px solid #222a36; border-radius:10px; padding:6px 8px
+.clockRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
-.pill.controls input[type="number"]{
-  width:6em; background:#0f141c; border:1px solid #1c2533; border-radius:6px; padding:4px 8px; color:var(--text)
+.clockbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f141c;
+  border: 1px solid #222a36;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.pill.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--layer);
+  border: 1px solid #222a36;
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.pill.controls input[type="number"] {
+  width: 6em;
+  background: #0f141c;
+  border: 1px solid #1c2533;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--text);
 }
 
 /* PV & puzzle areas */
-.moves{max-height:220px; overflow:auto}
-.status{min-height:22px}
+.moves {
+  max-height: 220px;
+  overflow: auto;
+}
+.status {
+  min-height: 22px;
+}
+#puzzleStatus {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
