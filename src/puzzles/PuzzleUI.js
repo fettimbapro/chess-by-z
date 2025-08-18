@@ -298,6 +298,7 @@ export class PuzzleUI {
     } else {
       if (this.dom?.puzzleStatus)
         this.dom.puzzleStatus.innerHTML = `<span style="color:#ff6b6b">Try again.</span>`;
+      window.MoveFlash?.flash({ color: "255,107,107" });
       this.game.undo();
       return false;
     }
