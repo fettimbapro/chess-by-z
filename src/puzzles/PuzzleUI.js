@@ -102,7 +102,13 @@ export class PuzzleUI {
     try {
       const diff = parseInt(this.dom.difficultyRange?.value || "5", 10);
       const opening = this.dom.openingSel?.value || "";
-      const p = await this.svc.randomFiltered({ difficulty: diff, opening });
+      const themeStr = this.dom.themeInput?.value || "";
+      const themes = themeStr.split(/[,\s]+/).filter(Boolean);
+      const p = await this.svc.randomFiltered({
+        difficulty: diff,
+        opening,
+        themes,
+      });
       if (!p) {
         alert("No puzzle matches your filter.");
         return;
