@@ -1,5 +1,5 @@
 import { Chess } from "../vendor/chess.mjs";
-import { adaptLichessPuzzle } from "./PuzzleModel.js";
+import { adaptLichessPuzzle } from "../puzzles/PuzzleModel.js";
 
 function on(el, type, fn) {
   if (el) el.addEventListener(type, fn);
@@ -38,6 +38,8 @@ export class PuzzleUI {
     this.current = null;
     this.index = 0;
     this.autoplayFirst = false;
+    this._hintStage = 0;
+    this._hintSquare = null;
 
     this.bindDom();
     this.populateOpenings();
@@ -127,8 +129,8 @@ export class PuzzleUI {
 
   applyCurrent(center = false) {
     if (!this.current) return;
+    this.clearHint();
     this.game.load?.(this.current.fen);
-    this.ui.clearArrow?.();
 
     if (this.autoplayFirst && this.current.solutionSan?.length > 0) {
       const first = this.current.solutionSan[0];
@@ -158,6 +160,7 @@ export class PuzzleUI {
   }
 
   handleUserMove(mv) {
+    this.clearHint();
     const sanNeeded = this.current?.solutionSan?.[this.index];
     if (!sanNeeded) return false;
 
@@ -192,12 +195,34 @@ export class PuzzleUI {
     }
   }
 
+  clearHint() {
+    if (this._hintSquare)
+      this.ui.squareEl?.(this._hintSquare)?.classList?.remove("hl-from");
+    this._hintSquare = null;
+    this.ui.clearArrow?.();
+    this._hintStage = 0;
+  }
+
   hint() {
     const san = this.current?.solutionSan?.[this.index];
     if (!san) return;
     const tmp = new Chess(this.game.fen());
     const m = tmp.move(san);
-    if (m) this.ui.drawArrowUci?.(m.from + m.to + (m.promotion || ""));
+    if (!m) return;
+    if (this._hintStage === 0) {
+      this.ui.clearArrow?.();
+      if (this._hintSquare)
+        this.ui.squareEl?.(this._hintSquare)?.classList?.remove("hl-from");
+      this._hintSquare = m.from;
+      this.ui.squareEl?.(m.from)?.classList?.add("hl-from");
+      this._hintStage = 1;
+    } else {
+      if (this._hintSquare)
+        this.ui.squareEl?.(this._hintSquare)?.classList?.remove("hl-from");
+      this._hintSquare = null;
+      this.ui.drawArrowUci?.(m.from + m.to + (m.promotion || ""));
+      this._hintStage = 0;
+    }
   }
 }
 

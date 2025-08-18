@@ -3,7 +3,7 @@ import { Clock } from "../core/Clock.js";
 import { BoardUI } from "../ui/BoardUI.js";
 import { WorkerEngine } from "../engine/WorkerEngine.js";
 import { PuzzleService } from "../puzzles/PuzzleService.js";
-import { PuzzleUI } from "../puzzles/PuzzleUI.js";
+import { PuzzleUI } from "../ui/PuzzleUI.js";
 import { ClockPanel } from "../ui/ClockPanel.js";
 import { detectOpening } from "../engine/Openings.js";
 import { Sounds } from "../util/Sounds.js";

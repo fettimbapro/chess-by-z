@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { PuzzleUI } from "../chess-website-uml/public/src/puzzles/PuzzleUI.js";
+import { PuzzleUI } from "../chess-website-uml/public/src/ui/PuzzleUI.js";
 import { Game } from "../chess-website-uml/public/src/core/Game.js";
 
 // Ensure puzzle loading orients board for side to move
