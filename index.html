@@ -315,6 +315,25 @@
         cursor: pointer;
         font-size: 28px;
       }
+      .puzzlePrompt {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+      }
+      .puzzlePrompt .box {
+        background: #0c1118;
+        border: 1px solid #1c2533;
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+      }
 
       /* Cards */
       .card {
@@ -557,6 +576,9 @@
               ></svg>
             </div>
             <canvas id="fireworks" class="fxCanvas" aria-hidden="true"></canvas>
+
+            <!-- Puzzle completion prompt -->
+            <div class="puzzlePrompt" id="puzzlePrompt"></div>
 
             <!-- Promotion dialog -->
             <div class="promo" id="promo">
