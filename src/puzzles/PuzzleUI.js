@@ -106,6 +106,7 @@ export class PuzzleUI {
     this.autoplayFirst = false;
     this.hintStage = 0;
     this.hintSquare = null;
+    this.seenIds = new Set();
 
     this.bindDom();
     this.populateOpenings();
@@ -224,7 +225,11 @@ export class PuzzleUI {
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
-      const opts = { opening, themes };
+      const opts = {
+        opening,
+        themes,
+        excludeIds: Array.from(this.seenIds),
+      };
       if (diffMin !== null) opts.difficultyMin = diffMin;
       if (diffMax !== null) opts.difficultyMax = diffMax;
       const p = await this.svc.randomFiltered(opts);
@@ -242,6 +247,7 @@ export class PuzzleUI {
     try {
       const c = await adaptOrIdentity(p);
       this.current = { ...c, daily: p.daily };
+      if (this.current.id) this.seenIds.add(this.current.id);
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
