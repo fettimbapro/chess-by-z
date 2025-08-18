@@ -21,8 +21,20 @@ export class PuzzleService {
     return this.openingsIndex;
   }
 
-  async randomFiltered({ difficulty = 5, opening = "" } = {}) {
+  async randomFiltered({ difficulty = 5, opening = "", themes = [] } = {}) {
     const [min, max] = diffToRange(difficulty);
+    const themeList = Array.isArray(themes)
+      ? themes.filter(Boolean)
+      : String(themes)
+          .split(/[,\s]+/)
+          .filter(Boolean);
+    const byTheme = (p) =>
+      !themeList.length ||
+      themeList.every((t) =>
+        String(p.themes || "")
+          .toLowerCase()
+          .includes(t.toLowerCase()),
+      );
     if (opening) {
       const idx = await this.listOpenings();
       const files = idx[opening];
@@ -35,7 +47,8 @@ export class PuzzleService {
           (p) =>
             p.rating >= min &&
             p.rating <= max &&
-            String(p.openingTags || "").includes(opening),
+            String(p.openingTags || "").includes(opening) &&
+            byTheme(p),
         );
         if (matches.length)
           return matches[(Math.random() * matches.length) | 0];
@@ -50,7 +63,9 @@ export class PuzzleService {
       const arr = await this.loadCsv(
         `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
       );
-      const matches = arr.filter((p) => p.rating >= min && p.rating <= max);
+      const matches = arr.filter(
+        (p) => p.rating >= min && p.rating <= max && byTheme(p),
+      );
       if (!matches.length) return null;
       return matches[(Math.random() * matches.length) | 0];
     }
