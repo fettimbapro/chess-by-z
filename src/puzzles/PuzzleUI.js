@@ -18,6 +18,71 @@ const DIFF_LABELS = [
   "Legendary",
 ];
 
+const THEMES = [
+  "advancedPawn",
+  "advantage",
+  "anastasiaMate",
+  "arabianMate",
+  "attackingF2F7",
+  "attraction",
+  "backRankMate",
+  "bishopEndgame",
+  "bodenMate",
+  "capturingDefender",
+  "castling",
+  "clearance",
+  "crushing",
+  "defensiveMove",
+  "deflection",
+  "discoveredAttack",
+  "doubleBishopMate",
+  "doubleCheck",
+  "dovetailMate",
+  "enPassant",
+  "endgame",
+  "equality",
+  "exposedKing",
+  "fork",
+  "hangingPiece",
+  "hookMate",
+  "interference",
+  "intermezzo",
+  "killBoxMate",
+  "kingsideAttack",
+  "knightEndgame",
+  "long",
+  "master",
+  "masterVsMaster",
+  "mate",
+  "mateIn1",
+  "mateIn2",
+  "mateIn3",
+  "mateIn4",
+  "mateIn5",
+  "middlegame",
+  "oneMove",
+  "opening",
+  "pawnEndgame",
+  "pin",
+  "promotion",
+  "queenEndgame",
+  "queenRookEndgame",
+  "queensideAttack",
+  "quietMove",
+  "rookEndgame",
+  "sacrifice",
+  "short",
+  "skewer",
+  "smotheredMate",
+  "superGM",
+  "trappedPiece",
+  "underPromotion",
+  "veryLong",
+  "vukovicMate",
+  "xRayAttack",
+  "zugzwang",
+];
+
 export class PuzzleUI {
   constructor({
     game,
@@ -43,6 +108,7 @@ export class PuzzleUI {
 
     this.bindDom();
     this.populateOpenings();
+    this.populateThemes();
   }
 
   show(flag) {
@@ -76,6 +142,20 @@ export class PuzzleUI {
     } catch {}
   }
 
+  populateThemes() {
+    try {
+      if (!this.dom?.themeSel) return;
+      const opts = ['<option value="">Any</option>'];
+      for (const name of THEMES) {
+        const label = name
+          .replace(/_/g, " ")
+          .replace(/([a-z])([A-Z])/g, "$1 $2");
+        opts.push(`<option value="${name}">${label}</option>`);
+      }
+      this.dom.themeSel.innerHTML = opts.join("");
+    } catch {}
+  }
+
   bindDom() {
     const d = this.dom;
 
@@ -105,8 +185,8 @@ export class PuzzleUI {
     try {
       const diff = parseInt(this.dom.difficultyRange?.value || "5", 10);
       const opening = this.dom.openingSel?.value || "";
-      const themeStr = this.dom.themeInput?.value || "";
-      const themes = themeStr.split(/[,\s]+/).filter(Boolean);
+      const theme = this.dom.themeSel?.value || "";
+      const themes = theme ? [theme] : [];
       const p = await this.svc.randomFiltered({
         difficulty: diff,
         opening,
