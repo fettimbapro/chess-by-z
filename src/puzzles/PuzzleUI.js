@@ -329,7 +329,7 @@ export class PuzzleUI {
     if (!this.dom?.puzzleStatus) return;
     this.dom.puzzleStatus.innerHTML =
       `<span style="color:#39d98a">Solved 🎉</span>` +
-      '<button id="nextPuzzle" style="margin-left:8px">New Puzzle?</button>';
+      '<button id="nextPuzzle">New Puzzle?</button>';
     const btn = this.dom.puzzleStatus.querySelector("#nextPuzzle");
     on(btn, "click", () => this.loadFilteredRandom());
   }
