@@ -115,6 +115,7 @@ export class App {
         difficultyMin: qs("#difficultyMin"),
         difficultyMax: qs("#difficultyMax"),
         difficultyTrack: qs("#difficultyRangeFill"),
+        difficultySlider: qs("#difficultySlider"),
         difficultyLabel: qs("#difficultyLabel"),
         puzzleInfo: qs("#puzzleInfo"),
         puzzleStatus: qs("#puzzleStatus"),
