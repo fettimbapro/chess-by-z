@@ -125,12 +125,7 @@ export class App {
         this.refreshAll();
       },
       onMove: (mv) => this.playMoveSound(mv),
-      onPuzzleLoad: (turn) => {
-        this.sideSel.value = turn === "w" ? "white" : "black";
-        this.gameOver = false;
-        this.applyOrientation();
-        this.updateSwitchButtonText();
-      },
+      onPuzzleLoad: this.handlePuzzleLoad.bind(this),
     });
 
     // --- REVIEW MODE state ---
@@ -358,6 +353,15 @@ export class App {
   updateSwitchButtonText() {
     const next = this.sideSel.value === "white" ? "black" : "white";
     this.switchBtn.textContent = `Switch to ${next} and restart`;
+  }
+
+  handlePuzzleLoad(turn) {
+    this.sideSel.value = turn === "w" ? "white" : "black";
+    this.gameOver = false;
+    this.applyOrientation();
+    this.updateSwitchButtonText();
+    this.lastCelebrationPly = -1;
+    this.ui.stopCelebration?.();
   }
 
   setMode(mode) {

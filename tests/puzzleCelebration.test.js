@@ -54,3 +54,31 @@ test("celebrates when puzzle solved without mate", () => {
   assert.equal(app.ui.square, undefined);
   assert.equal(app.lastCelebrationPly, 1);
 });
+
+test("resets celebration state when puzzle loads", () => {
+  const app = Object.create(App.prototype);
+  app.sideSel = { value: "white" };
+  app.gameOver = true;
+  app.applyOrientation = () => {
+    app.oriented = true;
+  };
+  app.updateSwitchButtonText = () => {
+    app.switchTextUpdated = true;
+  };
+  app.ui = {
+    stopped: false,
+    stopCelebration() {
+      this.stopped = true;
+    },
+  };
+  app.lastCelebrationPly = 3;
+
+  App.prototype.handlePuzzleLoad.call(app, "b");
+
+  assert.equal(app.sideSel.value, "black");
+  assert.equal(app.gameOver, false);
+  assert.equal(app.lastCelebrationPly, -1);
+  assert.equal(app.ui.stopped, true);
+  assert.equal(app.oriented, true);
+  assert.equal(app.switchTextUpdated, true);
+});
