@@ -119,6 +119,7 @@ export class App {
         puzzleInfo: qs("#puzzleInfo"),
         puzzleStatus: qs("#puzzleStatus"),
         puzzleCount: qs("#puzzleCount"),
+        puzzlePrompt: qs("#puzzlePrompt"),
       },
       onStateChanged: () => {
         this.syncBoard();
