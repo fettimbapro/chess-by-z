@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Chess by Sam</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f1216" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
+    <style>
+      :root {
+        --bg: #0f1216;
+        --layer: #141922;
+        --muted: #8aa0b6;
+        --text: #e8eef5;
+        --square-dark: #2a3443;
+        --square-light: #3a475b;
+        --hl: #6ba7ff;
+        --accent: #6ba7ff;
+        --good: #39d98a;
+        --bad: #ff6b6b;
+        --cell: 64px;
+        --pieceSize: 52px;
+        --content-w: 92vw;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          15px/1.4 system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Ubuntu,
+          Cantarell,
+          Noto Sans,
+          Helvetica Neue,
+          Arial;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      header h1 {
+        position: relative;
+        margin: 4px 0 0 0;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        text-align: center;
+      }
+      header h1 .by-sam {
+        position: absolute;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: 8px;
+        font-size: 30%;
+        color: var(--muted);
+      }
+
+      footer.site-footer {
+        margin-top: 40px;
+        padding-top: 8px;
+        border-top: 1px solid #222a36;
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      footer.site-footer a {
+        color: var(--accent);
+      }
+
+      /* Board section first; controls below (single column) */
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      /* Board with clocks above and below */
+      .board-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .board-area.flipped {
+        flex-direction: column-reverse;
+      }
+
+      .board-wrap {
+        position: relative;
+        background: var(--layer);
+        border: 1px solid #222a36;
+        border-radius: 12px;
+        padding: 10px;
+        margin-inline: auto;
+        width: calc(92vw * 0.95);
+        max-width: calc(660px * 0.95);
+      }
+      @media (min-width: 980px) {
+        .board-wrap {
+          width: calc(40vw * 0.95);
+          max-width: none;
+        }
+      }
+
+      /* Board */
+      #board {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1/1;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-template-rows: repeat(8, 1fr);
+        border-radius: 12px;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        user-select: none;
+      }
+      .sq {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        font-size: var(--pieceSize);
+      }
+      .sq.light {
+        background: var(--square-light);
+      }
+      .sq.dark {
+        background: var(--square-dark);
+      }
+      .sq.sel {
+        outline: 3px solid rgba(107, 167, 255, 0.95);
+        outline-offset: -3px;
+      }
+      .sq.hover {
+        box-shadow: inset 0 0 0 3px rgba(107, 167, 255, 0.95);
+      }
+      .sq .dot {
+        position: absolute;
+        width: 28%;
+        height: 28%;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.35);
+      }
+      .sq.cap::after {
+        content: "";
+        position: absolute;
+        inset: 10%;
+        border: 3px solid rgba(255, 255, 255, 0.55);
+        border-radius: 50%;
+      }
+      .sq.dragSource {
+        opacity: 0.25;
+      }
+      @keyframes shake {
+        0% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-3px);
+        }
+        50% {
+          transform: translateX(3px);
+        }
+        75% {
+          transform: translateX(-3px);
+        }
+        100% {
+          transform: translateX(0);
+        }
+      }
+      .sq.shake {
+        animation: shake 0.18s;
+      }
+
+      /* Unicode chess pieces (black glyphs for both; recolored via CSS) */
+      .piece {
+        font-family:
+          "Noto Sans Symbols2", "Segoe UI Symbol", "DejaVu Sans", "Symbola",
+          "FreeSerif", serif;
+        font-variant-emoji: text;
+      }
+      .sq.pw,
+      .dragPiece.pw {
+        color: #f2f5f8;
+        text-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.6),
+          0 0 4px rgba(0, 0, 0, 0.35);
+      }
+      .sq.pb,
+      .dragPiece.pb {
+        color: #101419;
+        text-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.08),
+          0 0 2px rgba(255, 255, 255, 0.05);
+      }
+
+      /* Drag ghost */
+      .dragPiece {
+        position: absolute;
+        width: var(--cell);
+        height: var(--cell);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--pieceSize);
+        pointer-events: none;
+        filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+        transition: none;
+      }
+      #board.dragging {
+        cursor: grabbing;
+      }
+
+      /* overlays */
+      .overlay {
+        position: absolute;
+        inset: 10px;
+        pointer-events: none;
+      }
+      svg.arrow {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .fxCanvas {
+        position: absolute;
+        inset: 10px;
+        pointer-events: none;
+        display: none;
+        z-index: 25;
+      }
+
+      .evalbar {
+        position: absolute;
+        left: 0;
+        top: 10px;
+        bottom: 10px;
+        width: 10px;
+        border-radius: 8px;
+        background: #222a36;
+        overflow: hidden;
+        display: none;
+      }
+      .evalbar .white {
+        background: #f2f5f8;
+        width: 100%;
+        height: 50%;
+      }
+      .evalbar .black {
+        background: #0c0f14;
+        width: 100%;
+        height: 50%;
+      }
+
+      /* Promotion */
+      .promo {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 14, 20, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 30;
+      }
+      .promo .box {
+        background: #0c1118;
+        border: 1px solid #1c2533;
+        border-radius: 12px;
+        padding: 10px;
+        display: flex;
+        gap: 8px;
+      }
+      .promo .opt {
+        width: 56px;
+        height: 56px;
+        background: #141a25;
+        border: 1px solid #1c2533;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 28px;
+      }
+
+      /* Cards */
+      .card {
+        background: var(--layer);
+        border: 1px solid #222a36;
+        border-radius: 12px;
+        padding: 14px;
+        width: var(--content-w);
+        max-width: 660px;
+        margin-inline: auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(6px);
+      }
+      @media (min-width: 980px) {
+        .card {
+          width: 40vw;
+          max-width: none;
+        }
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 8px 0;
+      }
+      .row label {
+        min-width: 80px;
+      }
+      .button-row {
+        justify-content: center;
+      }
+
+      /* Form controls */
+      select,
+      input[type="text"],
+      input[type="number"],
+      input[type="file"] {
+        background: #1b2432;
+        border: 1px solid #2a3443;
+        border-radius: 8px;
+        padding: 6px 8px;
+        color: var(--text);
+      }
+      input::placeholder {
+        color: var(--muted);
+      }
+
+      .pv {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+          monospace;
+        font-size: 13px;
+      }
+      .status {
+        margin-top: 6px;
+        min-height: 24px;
+      }
+      .badge {
+        display: inline-flex;
+        min-width: 10px;
+        height: 18px;
+        padding: 0 6px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #112033;
+        border: 1px solid #27405c;
+        font-size: 12px;
+        color: #cfe2ff;
+      }
+
+      /* Clocks */
+      .player-clock {
+        font-family:
+          "Orbitron", ui-monospace, SFMono-Regular, Menlo, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 20px;
+        padding: 4px 14px;
+        border-radius: 8px;
+        border: 1px solid #222a36;
+        background: linear-gradient(145deg, #141a25, #0f141c);
+        color: #e8eef5;
+        box-shadow:
+          inset 0 0 6px rgba(0, 0, 0, 0.6),
+          0 0 8px rgba(107, 167, 255, 0.25);
+        transition:
+          background 0.2s,
+          color 0.2s,
+          box-shadow 0.2s;
+      }
+      .player-clock.white {
+        background: linear-gradient(145deg, #f2f5f8, #cdd3db);
+        color: #0f1216;
+      }
+      .player-clock.black {
+        background: linear-gradient(145deg, #1a212f, #0d1118);
+        color: #e8eef5;
+      }
+      .player-clock.active {
+        box-shadow:
+          inset 0 0 6px rgba(0, 0, 0, 0.6),
+          0 0 12px var(--accent);
+      }
+
+      /* Buttons */
+      button {
+        background: var(--accent);
+        color: var(--bg);
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+        transition:
+          background 0.2s,
+          transform 0.1s,
+          box-shadow 0.2s;
+      }
+      button:hover {
+        background: #5b97f0;
+      }
+      button:active {
+        transform: scale(0.97);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+      }
+      button.primary {
+        box-shadow: 0 0 8px var(--accent);
+        font-weight: bold;
+      }
+
+      /* Game info text styling */
+      .tip-moves {
+        flex: 1;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+          monospace;
+        font-size: 13px;
+        line-height: 1.35;
+        white-space: normal;
+        word-wrap: break-word;
+      }
+
+      /* Arrow rendering polish */
+      svg .user-arrows line,
+      svg .sys-arrows line {
+        stroke-linecap: round;
+      }
+      svg .user-arrows polygon,
+      svg .sys-arrows polygon {
+        shape-rendering: geometricPrecision;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>Chess<span class="by-sam">by Sam</span></h1>
+      </header>
+
+      <div class="stack">
+        <!-- BOARD FIRST -->
+        <div class="board-area">
+          <div class="row" id="puzzleBottom" style="display: none">
+            <button id="fetchDaily">Daily</button>
+            <button id="newPuzzle">New Puzzle</button>
+            <button id="puzzleHint">Hint</button>
+          </div>
+          <div class="player-clock black" id="clockBlack">05:00</div>
+          <div class="board-wrap">
+            <div class="evalbar" id="evalbar">
+              <div class="white" id="evalWhite"></div>
+              <div class="black" id="evalBlack"></div>
+            </div>
+
+            <div id="board">
+              <!-- 64 squares created by JS -->
+              <svg
+                class="arrow"
+                id="arrowSvg"
+                viewBox="0 0 800 800"
+                preserveAspectRatio="none"
+              ></svg>
+            </div>
+            <canvas id="fireworks" class="fxCanvas" aria-hidden="true"></canvas>
+
+            <!-- Promotion dialog -->
+            <div class="promo" id="promo">
+              <div class="box">
+                <div class="opt" data-piece="q">♛</div>
+                <div class="opt" data-piece="r">♜</div>
+                <div class="opt" data-piece="b">♝</div>
+                <div class="opt" data-piece="n">♞</div>
+              </div>
+            </div>
+          </div>
+          <div class="player-clock white" id="clockWhite">05:00</div>
+          <div id="puzzleTop" style="display: none">
+            <div class="muted" id="puzzleInfo">—</div>
+            <div class="status" id="puzzleStatus"></div>
+            <div class="row">
+              <label>Opening</label>
+              <select id="openingFilter" style="flex: 1"></select>
+            </div>
+            <div class="row">
+              <label>Difficulty</label>
+              <input
+                type="range"
+                id="difficultyRange"
+                min="1"
+                max="10"
+                value="5"
+              />
+              <span class="muted" id="difficultyLabel">Medium</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTROLS UNDER THE BOARD -->
+        <div class="card">
+          <div class="row button-row">
+            <label for="side" style="display: none">Your side</label>
+            <select id="side" style="display: none">
+              <option value="white">White</option>
+              <option value="black">Black</option>
+            </select>
+
+            <button id="switchSide" class="switch-btn">
+              Switch to black and restart
+            </button>
+          </div>
+
+          <div class="row button-row" id="modeButtons">
+            <button class="btn" data-mode="play">Play vs Engine</button>
+            <button class="btn" data-mode="analysis">Analysis</button>
+            <button class="btn" data-mode="puzzle">Puzzles</button>
+            <select id="mode" style="display: none">
+              <option value="play">Play vs Engine</option>
+              <option value="analysis">Analysis</option>
+              <option value="puzzle">Puzzles</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <div class="pv" id="pvBox"></div>
+          </div>
+          <div class="row">
+            <label class="muted">Turn</label>
+            <span id="infoTurn">—</span>
+          </div>
+          <div class="row">
+            <label class="muted">Opening</label>
+            <span id="infoOpening">—</span>
+          </div>
+          <div class="row">
+            <label class="muted">Moves</label>
+            <div class="tip-moves" id="infoMoves">—</div>
+          </div>
+
+          <details id="advancedControls">
+            <summary>Advanced</summary>
+            <div class="row">
+              <div id="engineStatus" class="muted">Engine: ready</div>
+            </div>
+            <div class="row" id="knobsRow">
+              <label class="muted">Elo</label>
+              <input
+                type="range"
+                id="elo"
+                min="1"
+                max="100"
+                step="1"
+                value="100"
+              />
+              <span id="eloVal">100%</span>
+
+              <label class="muted">Depth</label>
+              <input
+                type="range"
+                id="depth"
+                min="2"
+                max="22"
+                step="1"
+                value="22"
+              />
+              <span id="depthVal">22</span>
+
+              <label class="muted">MultiPV</label>
+              <input
+                type="range"
+                id="multipv"
+                min="1"
+                max="4"
+                step="1"
+                value="1"
+              />
+              <span id="multipvVal">1</span>
+            </div>
+
+            <div class="row">
+              <label class="muted">Opening book (offline)</label>
+              <input type="checkbox" id="useBook" checked />
+              <span class="muted">• Play mode only, first ~10 plies</span>
+            </div>
+
+            <div class="row">
+              <label>Clock</label>
+              <input type="number" id="timeMin" value="5" min="1" max="180" />
+              <span class="muted">min</span>
+              <input type="number" id="incSec" value="3" min="0" max="60" />
+              <span class="muted">+ sec</span>
+            </div>
+          </details>
+        </div>
+
+        <!-- Optional: Game/PGN helpers -->
+        <div class="card">
+          <h3>Game / PGN</h3>
+          <div class="row">
+            <button id="copyPgn">Copy PGN</button>
+            <button id="loadPgn">Load PGN</button>
+            <input id="pgnText" placeholder="Paste PGN here" style="flex: 1" />
+          </div>
+          <div class="row">
+            <button id="exportFen">Copy FEN</button>
+            <button id="importFen">Load FEN</button>
+            <input id="fenText" placeholder="Paste FEN here" style="flex: 1" />
+          </div>
+        </div>
+
+        <!-- Puzzles -->
+      </div>
+      <footer class="site-footer">
+        <p>
+          Fully offline · No dependencies · Client-side engine ·
+          <a href="https://github.com/samzlotnik/chess-by-z">Open source</a>.
+          Contact:
+          <a href="mailto:itsjustme@samzlotnik.se">itsjustme@samzlotnik.se</a>
+        </p>
+      </footer>
+    </div>
+
+    <!-- App entry + engine boot (leave these as-is for your current project) -->
+    <script type="module" src="./src/app/App.js"></script>
+    <script type="module" src="./src/engine/boot.js"></script>
+    <script src="./src/ui/DrawOverlay.js" defer></script>
+    <script src="./src/ui/SysArrowPolicy.js" defer></script>
+    <script src="./src/ui/MoveFlash.js" defer></script>
+  </body>
+</html>
