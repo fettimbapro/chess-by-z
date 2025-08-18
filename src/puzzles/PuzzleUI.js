@@ -251,6 +251,10 @@ export class PuzzleUI {
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
+      if (this.dom?.puzzlePrompt) {
+        this.dom.puzzlePrompt.style.display = "none";
+        this.dom.puzzlePrompt.innerHTML = "";
+      }
     } catch (e) {
       alert("Failed to convert puzzle: " + e.message);
     }
