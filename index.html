@@ -400,11 +400,23 @@
         -webkit-appearance: none;
         appearance: none;
         pointer-events: auto;
-        background: var(--square-light);
+        background: var(--bg);
         border: none;
         width: 16px;
-        height: 16px;
-        border-radius: 50%;
+        height: 24px;
+        border-radius: 0;
+      }
+      #difficultyMin::-webkit-slider-thumb,
+      #difficultyMin::-moz-range-thumb {
+        border-left: 2px solid var(--accent);
+        border-top: 2px solid var(--accent);
+        border-bottom: 2px solid var(--accent);
+      }
+      #difficultyMax::-webkit-slider-thumb,
+      #difficultyMax::-moz-range-thumb {
+        border-right: 2px solid var(--accent);
+        border-top: 2px solid var(--accent);
+        border-bottom: 2px solid var(--accent);
       }
       #difficultyMin {
         z-index: 1;
