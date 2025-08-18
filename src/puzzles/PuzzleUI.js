@@ -287,7 +287,8 @@ export class PuzzleUI {
       if (diffMax !== null) opts.difficultyMax = diffMax;
       const count = await this.svc.countFiltered(opts);
       const noun = count === 1 ? "puzzle" : "puzzles";
-      this.dom.puzzleCount.textContent = `${count} ${noun} fit your filter`;
+      const verb = count === 1 ? "fits" : "fit";
+      this.dom.puzzleCount.textContent = `${count} ${noun} ${verb} your filter`;
     } catch {
       this.dom.puzzleCount.textContent = "";
     }
