@@ -173,37 +173,66 @@ export class PuzzleUI {
     on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
 
-    const updateDiffLabel = () => {
-      const val = parseInt(d.difficultyRange?.value || "5", 10);
+    const updateDiffLabel = (src) => {
+      let minVal = parseInt(d.difficultyMin?.value || "1", 10);
+      let maxVal = parseInt(d.difficultyMax?.value || "10", 10);
+      if (minVal > maxVal) {
+        if (src === "min") {
+          maxVal = minVal;
+          if (d.difficultyMax) d.difficultyMax.value = String(maxVal);
+        } else {
+          minVal = maxVal;
+          if (d.difficultyMin) d.difficultyMin.value = String(minVal);
+        }
+      }
+      if (d.difficultyTrack) {
+        const left = ((minVal - 1) / 9) * 100;
+        const right = ((maxVal - 1) / 9) * 100;
+        d.difficultyTrack.style.left = left + "%";
+        d.difficultyTrack.style.width = Math.max(0, right - left) + "%";
+      }
       if (d.difficultyLabel) {
-        const [min, max] = diffToRange(val);
-        d.difficultyLabel.textContent = `${
-          DIFF_LABELS[val - 1] || ""
-        } (${min}-${max})`;
+        const [minRating] = diffToRange(minVal);
+        const [, maxRating] = diffToRange(maxVal);
+        const name =
+          minVal === maxVal
+            ? DIFF_LABELS[minVal - 1] || ""
+            : `${DIFF_LABELS[minVal - 1] || ""}–${
+                DIFF_LABELS[maxVal - 1] || ""
+              }`;
+        d.difficultyLabel.textContent = `${name} (${minRating}-${maxRating})`;
       }
     };
     const syncDiffEnabled = () => {
       const enabled = d.difficultyFilter?.checked;
-      if (d.difficultyRange) d.difficultyRange.disabled = !enabled;
+      if (d.difficultyMin) d.difficultyMin.disabled = !enabled;
+      if (d.difficultyMax) d.difficultyMax.disabled = !enabled;
+      if (d.difficultyTrack)
+        d.difficultyTrack.style.display = enabled ? "" : "none";
       if (enabled) updateDiffLabel();
       else if (d.difficultyLabel) d.difficultyLabel.textContent = "Any";
     };
     on(d.difficultyFilter, "change", syncDiffEnabled);
-    on(d.difficultyRange, "input", updateDiffLabel);
+    on(d.difficultyMin, "input", () => updateDiffLabel("min"));
+    on(d.difficultyMax, "input", () => updateDiffLabel("max"));
     syncDiffEnabled();
   }
 
   async loadFilteredRandom() {
     try {
       const diffEnabled = this.dom.difficultyFilter?.checked;
-      const diff = diffEnabled
-        ? parseInt(this.dom.difficultyRange?.value || "5", 10)
+      const diffMin = diffEnabled
+        ? parseInt(this.dom.difficultyMin?.value || "1", 10)
+        : null;
+      const diffMax = diffEnabled
+        ? parseInt(this.dom.difficultyMax?.value || "10", 10)
         : null;
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
       const opts = { opening, themes };
-      if (diff !== null) opts.difficulty = diff;
+      if (diffMin !== null) opts.difficultyMin = diffMin;
+      if (diffMax !== null) opts.difficultyMax = diffMax;
       const p = await this.svc.randomFiltered(opts);
       if (!p) {
         alert("No puzzle matches your filter.");
