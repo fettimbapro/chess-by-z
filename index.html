@@ -386,7 +386,6 @@
         position: absolute;
         left: 0;
         width: 100%;
-        pointer-events: none;
         background: none;
       }
       #difficultySlider input[type="range"]::-webkit-slider-runnable-track,
@@ -404,6 +403,13 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
+      }
+      #difficultyMin {
+        z-index: 1;
+      }
+      #difficultyMax {
+        z-index: 2;
+        pointer-events: none;
       }
       #difficultySlider input:disabled {
         opacity: 0.5;
