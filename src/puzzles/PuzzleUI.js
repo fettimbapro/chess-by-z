@@ -222,6 +222,29 @@ export class PuzzleUI {
       updateDiffLabel("max");
       this.updateFilterCount();
     });
+    on(d.difficultySlider, "pointerdown", (e) => {
+      if (!d.difficultyFilter?.checked) return;
+      if (e.target === d.difficultyMin || e.target === d.difficultyMax) return;
+      const rect = d.difficultySlider.getBoundingClientRect();
+      const percent = Math.min(
+        Math.max(0, (e.clientX - rect.left) / rect.width),
+        1,
+      );
+      const value = Math.round(percent * 9) + 1;
+      let minVal = parseInt(d.difficultyMin?.value || "1", 10);
+      let maxVal = parseInt(d.difficultyMax?.value || "10", 10);
+      if (Math.abs(value - minVal) <= Math.abs(value - maxVal)) {
+        minVal = Math.min(value, maxVal);
+        if (d.difficultyMin) d.difficultyMin.value = String(minVal);
+        updateDiffLabel("min");
+      } else {
+        maxVal = Math.max(value, minVal);
+        if (d.difficultyMax) d.difficultyMax.value = String(maxVal);
+        updateDiffLabel("max");
+      }
+      this.updateFilterCount();
+      e.preventDefault();
+    });
     syncDiffEnabled();
   }
 
