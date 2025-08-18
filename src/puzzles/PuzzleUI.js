@@ -38,6 +38,8 @@ export class PuzzleUI {
     this.current = null;
     this.index = 0;
     this.autoplayFirst = false;
+    this.hintStage = 0;
+    this.hintSquare = null;
 
     this.bindDom();
     this.populateOpenings();
@@ -57,6 +59,7 @@ export class PuzzleUI {
     this.index = 0;
     this.autoplayFirst = false;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
+    this.clearHint();
   }
 
   async populateOpenings() {
@@ -134,7 +137,7 @@ export class PuzzleUI {
   applyCurrent(center = false) {
     if (!this.current) return;
     this.game.load?.(this.current.fen);
-    this.ui.clearArrow?.();
+    this.clearHint();
 
     if (this.autoplayFirst && this.current.solutionSan?.length > 0) {
       const first = this.current.solutionSan[0];
@@ -163,7 +166,16 @@ export class PuzzleUI {
     if (center && this.ui?.resizeOverlay) this.ui.resizeOverlay();
   }
 
+  clearHint() {
+    if (this.hintSquare)
+      this.ui.squareEl?.(this.hintSquare)?.classList?.remove("hl-hint");
+    this.hintSquare = null;
+    this.ui.clearArrow?.();
+    this.hintStage = 0;
+  }
+
   handleUserMove(mv) {
+    this.clearHint();
     const sanNeeded = this.current?.solutionSan?.[this.index];
     if (!sanNeeded) return false;
 
@@ -203,7 +215,20 @@ export class PuzzleUI {
     if (!san) return;
     const tmp = new Chess(this.game.fen());
     const m = tmp.move(san);
-    if (m) this.ui.drawArrowUci?.(m.from + m.to + (m.promotion || ""));
+    if (!m) return;
+    if (this.hintStage === 0) {
+      this.clearHint();
+      this.hintSquare = m.from;
+      this.ui.squareEl?.(m.from)?.classList?.add("hl-hint");
+      this.hintStage = 1;
+    } else {
+      if (this.hintSquare)
+        this.ui.squareEl?.(this.hintSquare)?.classList?.remove("hl-hint");
+      this.hintSquare = null;
+      this.ui.clearArrow?.();
+      this.ui.drawArrowUci?.(m.from + m.to + (m.promotion || ""));
+      this.hintStage = 2;
+    }
   }
 }
 
