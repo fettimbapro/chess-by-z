@@ -110,6 +110,90 @@ export class PuzzleService {
     }
   }
 
+  async countFiltered({
+    difficulty,
+    difficultyMin,
+    difficultyMax,
+    opening = "",
+    themes = [],
+    excludeIds = [],
+  } = {}) {
+    if (Array.isArray(difficulty)) {
+      [difficultyMin, difficultyMax] = difficulty;
+    }
+    let min,
+      max,
+      diffEnabled = difficultyMin != null || difficultyMax != null;
+    if (diffEnabled) {
+      [min] =
+        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
+      [, max] =
+        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
+    }
+    const themeList = Array.isArray(themes)
+      ? themes.filter(Boolean)
+      : String(themes)
+          .split(/[,\s]+/)
+          .filter(Boolean);
+    const byTheme = (p) =>
+      !themeList.length ||
+      themeList.every((t) =>
+        String(p.themes || "")
+          .toLowerCase()
+          .includes(t.toLowerCase()),
+      );
+    const excludeSet = new Set(
+      Array.isArray(excludeIds)
+        ? excludeIds.filter(Boolean)
+        : [excludeIds].filter(Boolean),
+    );
+    if (opening) {
+      const idx = await this.listOpenings();
+      const files = idx[opening];
+      if (!files || !files.length) return 0;
+      let total = 0;
+      for (const f of files) {
+        const arr = await this.loadCsv(
+          `./lib/lichess_puzzle_db/opening_sort/lichess_db_puzzle_by_opening.${f}.csv`,
+        );
+        const matches = arr.filter(
+          (p) =>
+            (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
+            String(p.openingTags || "").includes(opening) &&
+            byTheme(p),
+        );
+        const filtered = excludeSet.size
+          ? matches.filter((p) => !excludeSet.has(p.id))
+          : matches;
+        total += filtered.length;
+      }
+      return total;
+    } else {
+      let fileIdx;
+      if (!diffEnabled) {
+        fileIdx = ((Math.random() * 37) | 0) + 1;
+      } else {
+        const target = (min + max) / 2;
+        const step = 2400 / 37;
+        const idx = Math.round((target - 400) / step) + 1;
+        fileIdx = Math.max(1, Math.min(37, idx));
+      }
+      const file = String(fileIdx).padStart(3, "0");
+      const arr = await this.loadCsv(
+        `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
+      );
+      const matches = arr.filter(
+        (p) =>
+          (!diffEnabled || (p.rating >= min && p.rating <= max)) && byTheme(p),
+      );
+      if (!matches.length) return 0;
+      const filtered = excludeSet.size
+        ? matches.filter((p) => !excludeSet.has(p.id))
+        : matches;
+      return filtered.length;
+    }
+  }
+
   async loadCsv(path) {
     if (this.cache[path]) return this.cache[path];
     const text = await (await fetch(path)).text();
