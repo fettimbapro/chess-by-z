@@ -107,7 +107,6 @@ export class App {
         panelBottom: qs("#puzzleBottom"),
         clockBlack: qs("#clockBlack"),
         clockWhite: qs("#clockWhite"),
-        fetchDailyBtn: qs("#fetchDaily"),
         newPuzzleBtn: qs("#newPuzzle"),
         hintBtn: qs("#puzzleHint"),
         openingSel: qs("#openingFilter"),
@@ -229,7 +228,7 @@ export class App {
         this.clockPanel.pause();
         try {
           const p = await this.puzzleService.fetchDaily();
-          await this.puzzles.loadConvertedPuzzle(p);
+          await this.puzzles.loadConvertedPuzzle({ ...p, daily: true });
         } catch (e) {
           this.engineStatus.textContent = "Daily puzzle fetch failed";
         }
