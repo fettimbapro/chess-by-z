@@ -173,28 +173,38 @@ export class PuzzleUI {
     on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
 
-    const updateDiff = () => {
+    const updateDiffLabel = () => {
       const val = parseInt(d.difficultyRange?.value || "5", 10);
       if (d.difficultyLabel) {
         const [min, max] = diffToRange(val);
-        d.difficultyLabel.textContent = `${DIFF_LABELS[val - 1] || ""} (${min}-${max})`;
+        d.difficultyLabel.textContent = `${
+          DIFF_LABELS[val - 1] || ""
+        } (${min}-${max})`;
       }
     };
-    on(d.difficultyRange, "input", updateDiff);
-    updateDiff();
+    const syncDiffEnabled = () => {
+      const enabled = d.difficultyFilter?.checked;
+      if (d.difficultyRange) d.difficultyRange.disabled = !enabled;
+      if (enabled) updateDiffLabel();
+      else if (d.difficultyLabel) d.difficultyLabel.textContent = "Any";
+    };
+    on(d.difficultyFilter, "change", syncDiffEnabled);
+    on(d.difficultyRange, "input", updateDiffLabel);
+    syncDiffEnabled();
   }
 
   async loadFilteredRandom() {
     try {
-      const diff = parseInt(this.dom.difficultyRange?.value || "5", 10);
+      const diffEnabled = this.dom.difficultyFilter?.checked;
+      const diff = diffEnabled
+        ? parseInt(this.dom.difficultyRange?.value || "5", 10)
+        : null;
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
-      const p = await this.svc.randomFiltered({
-        difficulty: diff,
-        opening,
-        themes,
-      });
+      const opts = { opening, themes };
+      if (diff !== null) opts.difficulty = diff;
+      const p = await this.svc.randomFiltered(opts);
       if (!p) {
         alert("No puzzle matches your filter.");
         return;
