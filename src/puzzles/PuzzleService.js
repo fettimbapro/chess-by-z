@@ -90,7 +90,7 @@ export class PuzzleService {
           : matches;
         if (filtered.length)
           return filtered[(Math.random() * filtered.length) | 0];
-        fallback.push(...matches);
+        for (const m of matches) fallback.push(m);
       }
       return fallback.length
         ? fallback[(Math.random() * fallback.length) | 0]
@@ -103,19 +103,20 @@ export class PuzzleService {
         idxMin = ratingToFileIdx(min);
         idxMax = ratingToFileIdx(max);
       }
-      let matches = [];
+      const matches = [];
       for (let i = idxMin; i <= idxMax; i++) {
         const file = String(i).padStart(3, "0");
         const arr = await this.loadCsv(
           `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
         );
-        matches.push(
-          ...arr.filter(
-            (p) =>
-              (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
-              byTheme(p),
-          ),
-        );
+        for (const p of arr) {
+          if (
+            (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
+            byTheme(p)
+          ) {
+            matches.push(p);
+          }
+        }
       }
       if (!matches.length) return null;
       const filtered = excludeSet.size
