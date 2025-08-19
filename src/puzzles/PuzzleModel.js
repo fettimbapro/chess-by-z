@@ -1,4 +1,5 @@
 import { Chess } from "../vendor/chess.mjs";
+import { logError } from "../util/ErrorHandler.js";
 
 // Accepts various shapes:
 // - Lichess daily/byId: { puzzle:{ id, fen, solution:[uci...]|"uci...", moves:[uci...]|"uci...", rating, themes, gameId? }, game:{ id? } }
@@ -117,7 +118,8 @@ function fenFromPgn(pgn, ply) {
       if (game.move(moves[i])) count++;
     }
     return game.fen();
-  } catch {
+  } catch (err) {
+    logError(err, "PuzzleModel.fenFromPgn");
     return "";
   }
 }

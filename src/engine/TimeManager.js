@@ -1,11 +1,13 @@
 import { Chess } from "../vendor/chess.mjs";
+import { logError } from "../util/ErrorHandler.js";
 
 export function estimateComplexity(fen) {
   let moves = [];
   try {
     const ch = new Chess(fen);
     moves = ch.moves({ verbose: true });
-  } catch {
+  } catch (err) {
+    logError(err, "TimeManager.estimateComplexity");
     return 0;
   }
   let complexity = moves.length;

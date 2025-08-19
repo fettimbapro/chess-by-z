@@ -1,3 +1,5 @@
+import { logError } from "./ErrorHandler.js";
+
 export class Sounds {
   constructor() {
     this.ctx = null;
@@ -62,8 +64,8 @@ export class Sounds {
       osc.stop(now + p.dur);
 
       gain.connect(ctx.destination);
-    } catch {
-      // ignore playback errors
+    } catch (err) {
+      logError(err, "Sounds.play");
     }
   }
 }

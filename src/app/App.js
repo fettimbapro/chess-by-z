@@ -7,6 +7,7 @@ import { PuzzleUI } from "../puzzles/PuzzleUI.js";
 import { ClockPanel } from "../ui/ClockPanel.js";
 import { detectOpening } from "../engine/Openings.js";
 import { Sounds } from "../util/Sounds.js";
+import { logError } from "../util/ErrorHandler.js";
 
 const qs = (s) => document.querySelector(s);
 
@@ -168,7 +169,10 @@ export class App {
         try {
           navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
           this.engineStatus.textContent = "Copied drawings JSON";
-        } catch {}
+        } catch (err) {
+          logError(err, "App.copyDrawingsJson");
+          this.engineStatus.textContent = "Failed to copy drawings JSON";
+        }
       }
 
       // Import drawings JSON: ⌘/Ctrl+I
@@ -180,7 +184,8 @@ export class App {
         if (!txt) return;
         try {
           this.ui.setUserDrawings?.(JSON.parse(txt));
-        } catch {
+        } catch (err) {
+          logError(err, "App.importDrawingsJson");
           this.engineStatus.textContent = "Invalid drawings JSON";
         }
       }
@@ -272,7 +277,10 @@ export class App {
       try {
         navigator.clipboard?.writeText(pgn);
         this.engineStatus.textContent = "PGN copied";
-      } catch {}
+      } catch (err) {
+        logError(err, "App.copyPgn");
+        this.engineStatus.textContent = "Failed to copy PGN";
+      }
     });
     qs("#loadPgn").addEventListener("click", () => {
       const txt = this.pgnText.value.trim();
@@ -292,7 +300,10 @@ export class App {
       try {
         navigator.clipboard?.writeText(fen);
         this.engineStatus.textContent = "FEN copied";
-      } catch {}
+      } catch (err) {
+        logError(err, "App.copyFen");
+        this.engineStatus.textContent = "Failed to copy FEN";
+      }
     });
     qs("#importFen").addEventListener("click", () => {
       const txt = this.fenText.value.trim();
@@ -853,7 +864,9 @@ export class App {
             }
           }
         }
-      } catch {}
+      } catch (err) {
+        logError(err, "App.maybeCelebrate");
+      }
       this.sounds.play("airhorn");
       this.ui.celebrate?.(kingSq);
     } else if (solvedPuzzle && this.lastCelebrationPly !== ply) {

@@ -7,6 +7,8 @@
 // - Click-to-move selection + legal dots; drag preserved
 // - Opponent/book primary arrows ignored; all arrows cleared on setFen()
 
+import { logError } from "../util/ErrorHandler.js";
+
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
 // Use the *black* glyph codepoints for BOTH sides (solid shapes)
@@ -676,7 +678,9 @@ export class BoardUI {
       e.preventDefault();
       try {
         this.boardEl.setPointerCapture(e.pointerId);
-      } catch {}
+      } catch (err) {
+        logError(err, "BoardUI.attachLeftDrag");
+      }
 
       // Drag ghost uses black glyph too; color/outline set by .pw/.pb class on the ghost
       this.dragStart = {
@@ -752,7 +756,9 @@ export class BoardUI {
   onPointerUp(e) {
     try {
       this.boardEl.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch (err) {
+      logError(err, "BoardUI.onPointerUp");
+    }
     if (this._rafHandle) {
       cancelAnimationFrame(this._rafHandle);
       this._rafHandle = 0;

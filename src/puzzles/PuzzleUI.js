@@ -1,5 +1,6 @@
 import { Chess } from "../vendor/chess.mjs";
 import { adaptLichessPuzzle } from "./PuzzleModel.js";
+import { logError } from "../util/ErrorHandler.js";
 
 function on(el, type, fn) {
   if (el) el.addEventListener(type, fn);
@@ -133,7 +134,11 @@ export class PuzzleUI {
         );
       }
       this.dom.openingSel.innerHTML = opts.join("");
-    } catch {}
+    } catch (err) {
+      logError(err, "PuzzleUI.populateOpenings");
+      if (this.dom?.puzzleStatus)
+        this.dom.puzzleStatus.textContent = "Failed to load openings";
+    }
   }
 
   populateThemes() {
@@ -147,7 +152,9 @@ export class PuzzleUI {
         opts.push(`<option value="${name}">${label}</option>`);
       }
       this.dom.themeSel.innerHTML = opts.join("");
-    } catch {}
+    } catch (err) {
+      logError(err, "PuzzleUI.populateThemes");
+    }
   }
 
   bindDom() {
@@ -279,8 +286,9 @@ export class PuzzleUI {
       const noun = count === 1 ? "puzzle" : "puzzles";
       const verb = count === 1 ? "fits" : "fit";
       this.dom.puzzleCount.textContent = `${count} ${noun} ${verb} your filter`;
-    } catch {
-      this.dom.puzzleCount.textContent = "";
+    } catch (err) {
+      logError(err, "PuzzleUI.updateFilterCount");
+      this.dom.puzzleCount.textContent = "Error fetching count";
     }
   }
 
