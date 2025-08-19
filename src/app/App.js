@@ -119,6 +119,7 @@ export class App {
         puzzleStatus: qs("#puzzleStatus"),
         puzzleCount: qs("#puzzleCount"),
         puzzlePrompt: qs("#puzzlePrompt"),
+        puzzleLoading: qs("#puzzleLoading"),
       },
       onStateChanged: () => {
         this.syncBoard();
@@ -225,10 +226,13 @@ export class App {
         this.puzzles.resetProgress();
         this.clockPanel.pause();
         try {
+          this.puzzles.showLoading(true);
           const p = await this.puzzleService.fetchDaily();
           await this.puzzles.loadConvertedPuzzle({ ...p, daily: true });
         } catch (e) {
           this.engineStatus.textContent = "Daily puzzle fetch failed";
+        } finally {
+          this.puzzles.showLoading(false);
         }
       }
       this.refreshAll();
