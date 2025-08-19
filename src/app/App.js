@@ -558,10 +558,10 @@ export class App {
   askBookMove() {
     return new Promise((resolve) => {
       const onMove = (ev) => resolve(ev?.detail?.san || null);
-      window.addEventListener("book:move", onMove, { once: true });
+      window.addEventListener("book-move", onMove, { once: true });
       const hist = this.getSanHistory();
       window.dispatchEvent(
-        new CustomEvent("book:request", {
+        new CustomEvent("book-request", {
           detail: {
             sanHistory: hist.join(" "),
             ply: hist.length,
