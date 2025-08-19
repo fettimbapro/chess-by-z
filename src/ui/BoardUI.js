@@ -36,6 +36,7 @@ const BLACK_GLYPH = {
       display: inline-block;
       line-height: 1;
       font-size: calc(var(--cell) * 0.82);
+      font-family: "DejaVu Sans", "Noto Sans Symbols2", "Segoe UI Symbol", "Symbola", "FreeSerif", serif;
       font-variant-emoji: text;
       --glyph-outline-width: max(0.6px, calc(var(--cell) * 0.01));
       /* Outline color is provided via --glyph-outline (set by piece color) */

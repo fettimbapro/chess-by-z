@@ -8,6 +8,12 @@
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
 
     <style>
+      @font-face {
+        font-family: "DejaVu Sans";
+        src: url("./css/fonts/DejaVuSans.ttf") format("truetype");
+        font-display: swap;
+      }
+
       :root {
         --bg: #0f1216;
         --layer: #141922;
@@ -208,7 +214,7 @@
       /* Unicode chess pieces (black glyphs for both; recolored via CSS) */
       .piece {
         font-family:
-          "Noto Sans Symbols2", "Segoe UI Symbol", "DejaVu Sans", "Symbola",
+          "DejaVu Sans", "Noto Sans Symbols2", "Segoe UI Symbol", "Symbola",
           "FreeSerif", serif;
         font-variant-emoji: text;
       }
