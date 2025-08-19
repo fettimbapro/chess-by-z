@@ -1,3 +1,9 @@
+@font-face {
+  font-family: "DejaVu Sans";
+  src: url("./fonts/DejaVuSans.ttf") format("truetype");
+  font-display: swap;
+}
+
 /* Board card + board grid */
 .board-wrap {
   position: relative;
@@ -31,9 +37,17 @@
 /* Use stylized, monochrome chess fonts (no emoji/photorealistic) */
 .piece {
   font-family:
-    "Noto Sans Symbols2", "Segoe UI Symbol", "DejaVu Sans", "Symbola",
+    "DejaVu Sans", "Noto Sans Symbols2", "Segoe UI Symbol", "Symbola",
     "FreeSerif", serif;
   font-variant-emoji: text; /* force text presentation where supported */
+}
+
+.sq .glyph,
+.dragPiece.glyph {
+  font-family:
+    "DejaVu Sans", "Noto Sans Symbols2", "Segoe UI Symbol", "Symbola",
+    "FreeSerif", serif;
+  font-variant-emoji: text;
 }
 
 .sq {
