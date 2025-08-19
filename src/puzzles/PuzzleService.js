@@ -62,13 +62,16 @@ export class PuzzleService {
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
-    return (
+    let rows =
       data?.results ||
       data?.result?.[0]?.results ||
-      data?.result?.[0] ||
+      data?.result?.results ||
+      data?.rows ||
+      data?.row ||
       data?.result ||
-      []
-    );
+      [];
+    if (!Array.isArray(rows)) rows = [rows];
+    return rows;
   }
 
   async randomFiltered(opts = {}) {
