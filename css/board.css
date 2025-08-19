@@ -1,125 +1,282 @@
 /* Board card + board grid */
-.board-wrap{
-  position:relative;
-  background:var(--layer);
-  border:1px solid #222a36;
-  border-radius:12px;
-  padding:10px;
-  margin-inline:auto;
-  width:100%;
-  max-width:100%;
+.board-wrap {
+  position: relative;
+  background: var(--layer);
+  border: 1px solid #222a36;
+  border-radius: 12px;
+  padding: 10px;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 100%;
 }
-@media (min-width: 900px){
-  .board-wrap{ width: var(--content-desktop-width); }
+@media (min-width: 900px) {
+  .board-wrap {
+    width: var(--content-desktop-width);
+  }
 }
 
-#board{
-  width:100%;
-  aspect-ratio:1/1;                /* square board that fills card width */
-  display:grid;
-  grid-template-columns:repeat(8,1fr);
-  grid-template-rows:repeat(8,1fr);
-  border-radius:12px;
-  overflow:hidden;
-  touch-action:none; user-select:none; cursor:grab;
+#board {
+  width: 100%;
+  aspect-ratio: 1/1; /* square board that fills card width */
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border-radius: 12px;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
 }
 
 /* Use stylized, monochrome chess fonts (no emoji/photorealistic) */
-.piece{
+.piece {
   font-family:
-    "Noto Sans Symbols2",
-    "Segoe UI Symbol",
-    "DejaVu Sans",
-    "Symbola",
-    "FreeSerif",
-    serif;
+    "Noto Sans Symbols2", "Segoe UI Symbol", "DejaVu Sans", "Symbola",
+    "FreeSerif", serif;
   font-variant-emoji: text; /* force text presentation where supported */
 }
 
-.sq{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  line-height:1;
-  font-size:var(--pieceSize);
-  min-width:0; min-height:0;
+.sq {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: var(--pieceSize);
+  min-width: 0;
+  min-height: 0;
 }
-.sq.light{background:var(--square-light)}
-.sq.dark {background:var(--square-dark)}
+.sq.light {
+  background: var(--square-light);
+}
+.sq.dark {
+  background: var(--square-dark);
+}
 
-.sq.sel{outline:3px solid rgba(107,167,255,.95); outline-offset:-3px}
-.sq.hover{box-shadow: inset 0 0 0 3px rgba(107,167,255,.95)}
-.sq .dot{position:absolute; width:28%; height:28%; border-radius:50%; background:rgba(255,255,255,0.35)}
-.sq.cap::after{content:""; position:absolute; inset:10%; border:3px solid rgba(255,255,255,.55); border-radius:50%}
+.sq.sel {
+  outline: 3px solid rgba(107, 167, 255, 0.95);
+  outline-offset: -3px;
+}
+.sq.hover {
+  box-shadow: inset 0 0 0 3px rgba(107, 167, 255, 0.95);
+}
+.sq .dot {
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+}
+.sq.cap::after {
+  content: "";
+  position: absolute;
+  inset: 10%;
+  border: 3px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+}
 
 /* Both sides use black glyph shapes, colored via CSS */
-.sq.pw, .dragPiece.pw{color:#f2f5f8; text-shadow: 0 1px 0 rgba(0,0,0,.6), 0 0 4px rgba(0,0,0,.35)}
-.sq.pb, .dragPiece.pb{color:#101419; text-shadow: 0 1px 0 rgba(255,255,255,.08), 0 0 2px rgba(255,255,255,.05)}
+.sq.pw,
+.dragPiece.pw {
+  color: #f2f5f8;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 0 4px rgba(0, 0, 0, 0.35);
+}
+.sq.pb,
+.dragPiece.pb {
+  color: #101419;
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.2);
+}
 
 /* Drag ghost scales with board; JS keeps translate in sync */
-.dragPiece{
-  position:absolute; width:var(--cell); height:var(--cell);
-  display:flex; align-items:center; justify-content:center;
-  font-size:var(--pieceSize); pointer-events:none; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));
-  transition:none
+.dragPiece {
+  position: absolute;
+  width: var(--cell);
+  height: var(--cell);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--pieceSize);
+  pointer-events: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+  transition: none;
 }
-#board.dragging{cursor:grabbing}
-.sq.dragSource{opacity:.25}
+#board.dragging {
+  cursor: grabbing;
+}
+.sq.dragSource {
+  opacity: 0.25;
+}
 
-@keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-3px)}50%{transform:translateX(3px)}75%{transform:translateX(-3px)}100%{transform:translateX(0)}}
-.sq.shake{animation:shake .18s}
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+.sq.shake {
+  animation: shake 0.18s;
+}
 
 /* Overlays */
-.overlay{position:absolute; inset:10px; pointer-events:none}
-svg.arrow{position:absolute; inset:0; pointer-events:none}
+.overlay {
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+}
+svg.arrow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 
 /* Fireworks canvas: ensure it's ABOVE everything else except the promotion modal */
-.fxCanvas{
-  position:absolute; inset:10px; pointer-events:none; display:none;
+.fxCanvas {
+  position: absolute;
+  inset: 10px;
+  pointer-events: none;
+  display: none;
   z-index: 25;
 }
 
 /* Eval bar */
-.evalbar{position:absolute; left:0; top:10px; bottom:10px; width:10px; border-radius:8px; background:#222a36; overflow:hidden; display:none}
-.evalbar .white{background:#f2f5f8; width:100%; height:50%}
-evalbar .black{background:#0c0f14; width:100%; height:50%}
+.evalbar {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 10px;
+  border-radius: 8px;
+  background: #222a36;
+  overflow: hidden;
+  display: none;
+}
+.evalbar .white {
+  background: #f2f5f8;
+  width: 100%;
+  height: 50%;
+}
+evalbar .black {
+  background: #0c0f14;
+  width: 100%;
+  height: 50%;
+}
 
 /* Promotion */
-.promo{position:absolute; inset:0; background:rgba(10,14,20,.5); display:none; align-items:center; justify-content:center; z-index:30}
-.promo .box{background:#0c1118; border:1px solid #1c2533; border-radius:12px; padding:10px; display:flex; gap:8px}
-.promo .opt{width:56px; height:56px; background:#141a25; border:1px solid #1c2533; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:28px}
-.promo .opt.pw{color:#f2f5f8; text-shadow:0 1px 0 rgba(0,0,0,.6),0 0 4px rgba(0,0,0,.35)}
-.promo .opt.pb{color:#101419; text-shadow:0 1px 0 rgba(255,255,255,.08),0 0 2px rgba(255,255,255,.05)}
+.promo {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 14, 20, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+.promo .box {
+  background: #0c1118;
+  border: 1px solid #1c2533;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+}
+.promo .opt {
+  width: 56px;
+  height: 56px;
+  background: #141a25;
+  border: 1px solid #1c2533;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 28px;
+}
+.promo .opt.pw {
+  color: #f2f5f8;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.6),
+    0 0 4px rgba(0, 0, 0, 0.35);
+}
+.promo .opt.pb {
+  color: #101419;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 2px rgba(255, 255, 255, 0.05);
+}
 
 /* === Game info trigger + popover === */
-.game-info-trigger{
-  position:absolute; top:12px; right:12px;
-  width:28px; height:28px;
-  display:flex; align-items:center; justify-content:center;
-  background:#0f141c; color:#cfe2ff;
-  border:1px solid #27405c; border-radius:999px;
-  font-weight:700; font-size:14px; line-height:1;
-  cursor:pointer;
+.game-info-trigger {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f141c;
+  color: #cfe2ff;
+  border: 1px solid #27405c;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
 }
-.game-info-trigger:hover{ background:#122032; }
-
-.game-info-pop{
-  position:absolute; top:12px; right:12px; transform: translateY(36px);
-  width:min(90vw, 360px);
-  background:#0c1118; border:1px solid #1c2533; border-radius:12px; padding:10px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.45);
-  z-index:40;
-  display:none;
+.game-info-trigger:hover {
+  background: #122032;
 }
-.game-info-pop.open{ display:block; }
 
-.tip-row{ display:flex; gap:8px; margin:6px 0; align-items:flex-start }
-.tip-label{ min-width:82px; color:var(--muted) }
-.tip-value{ flex:1 }
-.tip-moves{
-  flex:1;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size:13px; line-height:1.35;
-  white-space:normal; word-wrap:break-word;
+.game-info-pop {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  transform: translateY(36px);
+  width: min(90vw, 360px);
+  background: #0c1118;
+  border: 1px solid #1c2533;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  z-index: 40;
+  display: none;
+}
+.game-info-pop.open {
+  display: block;
+}
+
+.tip-row {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0;
+  align-items: flex-start;
+}
+.tip-label {
+  min-width: 82px;
+  color: var(--muted);
+}
+.tip-value {
+  flex: 1;
+}
+.tip-moves {
+  flex: 1;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: normal;
+  word-wrap: break-word;
 }

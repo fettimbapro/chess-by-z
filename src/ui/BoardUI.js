@@ -71,11 +71,11 @@ const BLACK_GLYPH = {
     .sq.pw .glyph { color: #fff; }       /* white piece: white fill */
     .sq.pb .glyph { color: #0b0b0b; }    /* black piece: black fill */
     .sq.pw { --glyph-outline: #000; }    /* white piece gets black outline */
-    .sq.pb { --glyph-outline: #fff; --glyph-outline-width: max(0.3px, calc(var(--cell) * 0.005)); }    /* black piece gets white outline */
+    .sq.pb { --glyph-outline: #fff; --glyph-outline-width: max(0.1px, calc(var(--cell) * 0.003)); }    /* black piece gets white outline */
 
     /* Drag ghost adopts same rules by adding .pw/.pb on the ghost element */
     .dragPiece.glyph.pw { --glyph-outline: #000; color: #fff; }
-    .dragPiece.glyph.pb { --glyph-outline: #fff; color: #0b0b0b; --glyph-outline-width: max(0.3px, calc(var(--cell) * 0.005)); }
+    .dragPiece.glyph.pb { --glyph-outline: #fff; color: #0b0b0b; --glyph-outline-width: max(0.1px, calc(var(--cell) * 0.003)); }
 
     /* Legal move dots */
     .sq .dot {
