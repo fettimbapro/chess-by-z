@@ -4,13 +4,8 @@ import { PuzzleService } from "../chess-website-uml/public/src/puzzles/PuzzleSer
 
 test("randomFiltered works without difficulty filter", async () => {
   const svc = new PuzzleService();
-  const origFetch = global.fetch;
-  global.fetch = async () =>
-    new Response(
-      JSON.stringify({ id: "1", rating: 500, themes: "", openingTags: "" }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+  const puzzles = [{ id: "1", rating: 500, themes: "", openingTags: "" }];
+  svc.loadCsv = async () => puzzles;
   const res = await svc.randomFiltered({});
-  global.fetch = origFetch;
   assert.equal(res.id, "1");
 });

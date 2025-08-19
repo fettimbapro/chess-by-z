@@ -1,5 +1,12 @@
 // Service for retrieving puzzles without downloading entire CSV packs.
 
+// Endpoint for a Cloudflare Worker that proxies requests to the D1 database.
+// The worker should return JSON and set appropriate CORS headers.
+// Override `window.PUZZLE_D1_URL` at runtime to point at your deployed worker.
+const D1_WORKER_URL =
+  globalThis?.PUZZLE_D1_URL ??
+  "https://example-d1-worker.yourdomain.workers.dev";
+
 export class PuzzleService {
   constructor() {
     this.openingsIndex = null;
@@ -47,6 +54,23 @@ export class PuzzleService {
     return params;
   }
 
+  async queryD1(sql, params = []) {
+    const r = await fetch(D1_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sql, params }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    return (
+      data?.results ||
+      data?.result?.[0]?.results ||
+      data?.result?.[0] ||
+      data?.result ||
+      []
+    );
+  }
+
   async randomFiltered(opts = {}) {
     const excludeSet = new Set(
       Array.isArray(opts.excludeIds)
@@ -74,27 +98,109 @@ export class PuzzleService {
       return puzzles[idx] || null;
     }
 
-    const params = this.buildParams(opts);
-    let attempts = 5;
-    while (attempts-- > 0) {
-      const r = await fetch(`/api/puzzle?${params.toString()}`, {
-        headers: { accept: "application/json" },
-      });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const puzzle = await r.json();
-      if (!puzzle || !puzzle.id) return null;
-      if (!excludeSet.has(puzzle.id)) return puzzle;
+    let { difficultyMin, difficultyMax, opening = "", themes = [] } = opts;
+    if (difficultyMin == null && difficultyMax != null) difficultyMin = 0;
+    if (difficultyMax == null && difficultyMin != null) difficultyMax = 3500;
+
+    const where = [];
+    const params = [];
+    if (difficultyMin != null) {
+      where.push("Rating >= ?");
+      params.push(difficultyMin);
     }
-    return null;
+    if (difficultyMax != null) {
+      where.push("Rating <= ?");
+      params.push(difficultyMax);
+    }
+    if (opening) {
+      where.push("OpeningTags LIKE ?");
+      params.push(`%${opening}%`);
+    }
+    const themeList = Array.isArray(themes)
+      ? themes.filter(Boolean)
+      : String(themes)
+          .split(/[,\s]+/)
+          .filter(Boolean);
+    for (const t of themeList) {
+      where.push("Themes LIKE ?");
+      params.push(`%${t}%`);
+    }
+    if (excludeSet.size) {
+      where.push(
+        `PuzzleId NOT IN (${Array.from(excludeSet)
+          .map(() => "?")
+          .join(",")})`,
+      );
+      params.push(...excludeSet);
+    }
+    const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const sql = `SELECT PuzzleId as id, FEN as fen, Moves as moves, Rating as rating, RatingDeviation as ratingDeviation, Popularity as popularity, NbPlays as nbPlays, Themes as themes, GameUrl as gameUrl, OpeningTags as openingTags FROM puzzles ${whereClause} ORDER BY RANDOM() LIMIT 1;`;
+    const rows = await this.queryD1(sql, params);
+    return rows[0] || null;
   }
+
   async countFiltered(opts = {}) {
-    const params = this.buildParams(opts);
-    params.set("count", "1");
-    const r = await fetch(`/api/puzzle?${params.toString()}`, {
-      headers: { accept: "application/json" },
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
-    return +data.count || 0;
+    const excludeSet = new Set(
+      Array.isArray(opts.excludeIds)
+        ? opts.excludeIds.filter(Boolean)
+        : [opts.excludeIds].filter(Boolean),
+    );
+
+    if (typeof this.loadCsv === "function") {
+      let puzzles = await this.loadCsv(opts);
+      const min = opts.difficultyMin != null ? opts.difficultyMin : 0;
+      const max = opts.difficultyMax != null ? opts.difficultyMax : 3500;
+      puzzles = puzzles.filter((p) => p.rating >= min && p.rating <= max);
+      if (opts.opening)
+        puzzles = puzzles.filter((p) => p.openingTags?.includes(opts.opening));
+      const themeList = Array.isArray(opts.themes)
+        ? opts.themes.filter(Boolean)
+        : String(opts.themes ?? "")
+            .split(/[,\s]+/)
+            .filter(Boolean);
+      for (const t of themeList)
+        puzzles = puzzles.filter((p) => p.themes?.includes(t));
+      puzzles = puzzles.filter((p) => !excludeSet.has(p.id));
+      return puzzles.length;
+    }
+
+    let { difficultyMin, difficultyMax, opening = "", themes = [] } = opts;
+    if (difficultyMin == null && difficultyMax != null) difficultyMin = 0;
+    if (difficultyMax == null && difficultyMin != null) difficultyMax = 3500;
+    const where = [];
+    const params = [];
+    if (difficultyMin != null) {
+      where.push("Rating >= ?");
+      params.push(difficultyMin);
+    }
+    if (difficultyMax != null) {
+      where.push("Rating <= ?");
+      params.push(difficultyMax);
+    }
+    if (opening) {
+      where.push("OpeningTags LIKE ?");
+      params.push(`%${opening}%`);
+    }
+    const themeList = Array.isArray(themes)
+      ? themes.filter(Boolean)
+      : String(themes)
+          .split(/[,\s]+/)
+          .filter(Boolean);
+    for (const t of themeList) {
+      where.push("Themes LIKE ?");
+      params.push(`%${t}%`);
+    }
+    if (excludeSet.size) {
+      where.push(
+        `PuzzleId NOT IN (${Array.from(excludeSet)
+          .map(() => "?")
+          .join(",")})`,
+      );
+      params.push(...excludeSet);
+    }
+    const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const sql = `SELECT COUNT(*) as count FROM puzzles ${whereClause};`;
+    const rows = await this.queryD1(sql, params);
+    return +rows[0]?.count || 0;
   }
 }
