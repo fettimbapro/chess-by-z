@@ -110,6 +110,10 @@ export class PuzzleUI {
     if (this.dom?.clockWhite)
       this.dom.clockWhite.style.display = flag ? "none" : "";
   }
+  showLoading(flag) {
+    if (this.dom?.puzzleLoading)
+      this.dom.puzzleLoading.style.display = flag ? "flex" : "none";
+  }
   resetProgress() {
     this.index = 0;
     this.autoplayFirst = false;
@@ -212,6 +216,7 @@ export class PuzzleUI {
   }
 
   async loadFilteredRandom() {
+    this.showLoading(true);
     try {
       const diffEnabled = this.dom.difficultyFilter?.checked;
       const parseVal = (el) =>
@@ -236,6 +241,8 @@ export class PuzzleUI {
       await this.loadConvertedPuzzle({ ...p, autoplayFirst: true });
     } catch (e) {
       alert("Failed to load puzzle: " + e.message);
+    } finally {
+      this.showLoading(false);
     }
   }
 
