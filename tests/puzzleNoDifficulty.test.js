@@ -4,13 +4,13 @@ import { PuzzleService } from "../chess-website-uml/public/src/puzzles/PuzzleSer
 
 test("randomFiltered works without difficulty filter", async () => {
   const svc = new PuzzleService();
-  svc.loadCsv = async () => [
-    { id: "1", rating: 500, themes: "", openingTags: "" },
-    { id: "2", rating: 2500, themes: "", openingTags: "" },
-  ];
-  const origRandom = Math.random;
-  Math.random = () => 0; // deterministic
+  const origFetch = global.fetch;
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({ id: "1", rating: 500, themes: "", openingTags: "" }),
+      { headers: { "Content-Type": "application/json" } },
+    );
   const res = await svc.randomFiltered({});
-  Math.random = origRandom;
+  global.fetch = origFetch;
   assert.equal(res.id, "1");
 });

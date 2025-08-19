@@ -4,26 +4,42 @@ import { PuzzleService } from "../chess-website-uml/public/src/puzzles/PuzzleSer
 
 test("randomFiltered with minimum difficulty only", async () => {
   const svc = new PuzzleService();
-  svc.loadCsv = async () => [
+  const origFetch = global.fetch;
+  const puzzles = [
     { id: "1", rating: 500, themes: "", openingTags: "" },
     { id: "2", rating: 2500, themes: "", openingTags: "" },
   ];
-  const origRandom = Math.random;
-  Math.random = () => 0;
+  global.fetch = async (url) => {
+    const u = new URL(url, "http://localhost");
+    const min = +(u.searchParams.get("ratingMin") || 0);
+    const max = +(u.searchParams.get("ratingMax") || Infinity);
+    const eligible = puzzles.filter((p) => p.rating >= min && p.rating <= max);
+    return new Response(JSON.stringify(eligible[0] || null), {
+      headers: { "Content-Type": "application/json" },
+    });
+  };
   const res = await svc.randomFiltered({ difficultyMin: 600 });
-  Math.random = origRandom;
+  global.fetch = origFetch;
   assert.equal(res.id, "2");
 });
 
 test("randomFiltered with maximum difficulty only", async () => {
   const svc = new PuzzleService();
-  svc.loadCsv = async () => [
+  const origFetch = global.fetch;
+  const puzzles = [
     { id: "1", rating: 500, themes: "", openingTags: "" },
     { id: "2", rating: 2500, themes: "", openingTags: "" },
   ];
-  const origRandom = Math.random;
-  Math.random = () => 0;
+  global.fetch = async (url) => {
+    const u = new URL(url, "http://localhost");
+    const min = +(u.searchParams.get("ratingMin") || 0);
+    const max = +(u.searchParams.get("ratingMax") || Infinity);
+    const eligible = puzzles.filter((p) => p.rating >= min && p.rating <= max);
+    return new Response(JSON.stringify(eligible[0] || null), {
+      headers: { "Content-Type": "application/json" },
+    });
+  };
   const res = await svc.randomFiltered({ difficultyMax: 1000 });
-  Math.random = origRandom;
+  global.fetch = origFetch;
   assert.equal(res.id, "1");
 });

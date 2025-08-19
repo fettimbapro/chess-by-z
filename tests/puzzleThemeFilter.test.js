@@ -4,10 +4,19 @@ import { PuzzleService } from "../chess-website-uml/public/src/puzzles/PuzzleSer
 
 test("randomFiltered filters by themes", async () => {
   const svc = new PuzzleService();
-  svc.loadCsv = async () => [
-    { id: "1", rating: 500, themes: "fork", openingTags: "" },
-    { id: "2", rating: 500, themes: "pin", openingTags: "" },
-  ];
+  const origFetch = global.fetch;
+  global.fetch = async (url) => {
+    const u = new URL(url, "http://localhost");
+    const theme = u.searchParams.get("theme");
+    const map = {
+      fork: { id: "1", rating: 500, themes: "fork", openingTags: "" },
+      pin: { id: "2", rating: 500, themes: "pin", openingTags: "" },
+    };
+    const puzzle = map[theme] || null;
+    return new Response(JSON.stringify(puzzle), {
+      headers: { "Content-Type": "application/json" },
+    });
+  };
   const res1 = await svc.randomFiltered({
     difficultyMin: 400,
     difficultyMax: 800,
@@ -25,5 +34,6 @@ test("randomFiltered filters by themes", async () => {
     difficultyMax: 800,
     themes: ["skewer"],
   });
+  global.fetch = origFetch;
   assert.equal(res3, null);
 });
