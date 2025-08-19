@@ -14,12 +14,15 @@ test("countFiltered counts puzzles matching filters", async () => {
   const cnt1 = await svc.countFiltered({ themes: ["fork"], opening: "A" });
   assert.equal(cnt1, 1);
 
-  const cnt2 = await svc.countFiltered({ difficultyMin: 2, difficultyMax: 3 });
+  const cnt2 = await svc.countFiltered({
+    difficultyMin: 700,
+    difficultyMax: 1000,
+  });
   assert.equal(cnt2, 1);
 
   const cnt3 = await svc.countFiltered({
-    difficultyMin: 2,
-    difficultyMax: 3,
+    difficultyMin: 700,
+    difficultyMax: 1000,
     excludeIds: ["3"],
   });
   assert.equal(cnt3, 0);

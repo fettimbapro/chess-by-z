@@ -32,14 +32,12 @@ export class PuzzleService {
     if (Array.isArray(difficulty)) {
       [difficultyMin, difficultyMax] = difficulty;
     }
-    let min,
-      max,
-      diffEnabled = difficultyMin != null || difficultyMax != null;
+    const diffEnabled = difficultyMin != null || difficultyMax != null;
+    let min = 400,
+      max = 3400;
     if (diffEnabled) {
-      [min] =
-        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
-      [, max] =
-        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
+      if (difficultyMin != null) min = difficultyMin;
+      if (difficultyMax != null) max = difficultyMax;
     }
     const themeList = Array.isArray(themes)
       ? themes.filter(Boolean)
@@ -121,14 +119,12 @@ export class PuzzleService {
     if (Array.isArray(difficulty)) {
       [difficultyMin, difficultyMax] = difficulty;
     }
-    let min,
-      max,
-      diffEnabled = difficultyMin != null || difficultyMax != null;
+    const diffEnabled = difficultyMin != null || difficultyMax != null;
+    let min = 400,
+      max = 3400;
     if (diffEnabled) {
-      [min] =
-        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
-      [, max] =
-        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
+      if (difficultyMin != null) min = difficultyMin;
+      if (difficultyMax != null) max = difficultyMax;
     }
     const themeList = Array.isArray(themes)
       ? themes.filter(Boolean)
@@ -224,15 +220,6 @@ export class PuzzleService {
     return out;
   }
 }
-
-export function diffToRange(level) {
-  const base = 400;
-  const step = 300;
-  const min = base + (level - 1) * step;
-  const max = base + level * step;
-  return [min, max];
-}
-
 function get(a, i) {
   return i >= 0 && i < a.length ? a[i] : "";
 }

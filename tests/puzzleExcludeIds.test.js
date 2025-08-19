@@ -9,8 +9,8 @@ test("randomFiltered respects excludeIds", async () => {
     { id: "2", rating: 500, themes: "", openingTags: "" },
   ];
   const res = await svc.randomFiltered({
-    difficultyMin: 1,
-    difficultyMax: 1,
+    difficultyMin: 400,
+    difficultyMax: 800,
     excludeIds: ["1"],
   });
   assert.equal(res.id, "2");
