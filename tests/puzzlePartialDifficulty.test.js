@@ -11,6 +11,8 @@ test("randomFiltered with minimum difficulty only", async () => {
   ];
   global.fetch = async (url) => {
     const u = new URL(url, "http://localhost");
+    assert.equal(u.searchParams.get("ratingMin"), "600");
+    assert.equal(u.searchParams.get("ratingMax"), "3500");
     const min = +(u.searchParams.get("ratingMin") || 0);
     const max = +(u.searchParams.get("ratingMax") || Infinity);
     const eligible = puzzles.filter((p) => p.rating >= min && p.rating <= max);
@@ -32,6 +34,8 @@ test("randomFiltered with maximum difficulty only", async () => {
   ];
   global.fetch = async (url) => {
     const u = new URL(url, "http://localhost");
+    assert.equal(u.searchParams.get("ratingMin"), "0");
+    assert.equal(u.searchParams.get("ratingMax"), "1000");
     const min = +(u.searchParams.get("ratingMin") || 0);
     const max = +(u.searchParams.get("ratingMax") || Infinity);
     const eligible = puzzles.filter((p) => p.rating >= min && p.rating <= max);

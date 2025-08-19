@@ -28,6 +28,8 @@ export class PuzzleService {
     themes = [],
     excludeIds = [],
   } = {}) {
+    if (difficultyMin == null && difficultyMax != null) difficultyMin = 0;
+    if (difficultyMax == null && difficultyMin != null) difficultyMax = 3500;
     const params = new URLSearchParams();
     if (difficultyMin != null) params.set("ratingMin", difficultyMin);
     if (difficultyMax != null) params.set("ratingMax", difficultyMax);
