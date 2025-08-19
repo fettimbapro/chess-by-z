@@ -1,8 +1,11 @@
 // Service for retrieving puzzles without downloading entire CSV packs.
 
-const ACCOUNT_ID = "180c68240ec6a23541dd7ec80861fe68";
-const D1_UUID = "4cd7cd22-08e0-4eb9-8832-b63dedbe32bb";
-const API_TOKEN = "fb773564e18487386c41c2d1d007bed4";
+// Endpoint for a Cloudflare Worker that proxies requests to the D1 database.
+// The worker should return JSON and set appropriate CORS headers.
+// Override `window.PUZZLE_D1_URL` at runtime to point at your deployed worker.
+const D1_WORKER_URL =
+  globalThis?.PUZZLE_D1_URL ??
+  "https://example-d1-worker.yourdomain.workers.dev";
 
 export class PuzzleService {
   constructor() {
@@ -52,21 +55,19 @@ export class PuzzleService {
   }
 
   async queryD1(sql, params = []) {
-    const r = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/d1/database/${D1_UUID}/query`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_TOKEN}`,
-        },
-        body: JSON.stringify({ sql, params }),
-      },
-    );
+    const r = await fetch(D1_WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sql, params }),
+    });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     return (
-      data?.result?.[0]?.results || data?.result?.[0] || data?.result || []
+      data?.results ||
+      data?.result?.[0]?.results ||
+      data?.result?.[0] ||
+      data?.result ||
+      []
     );
   }
 
