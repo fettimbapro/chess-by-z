@@ -48,12 +48,33 @@ export class PuzzleService {
   }
 
   async randomFiltered(opts = {}) {
-    const params = this.buildParams(opts);
     const excludeSet = new Set(
       Array.isArray(opts.excludeIds)
         ? opts.excludeIds.filter(Boolean)
         : [opts.excludeIds].filter(Boolean),
     );
+
+    if (typeof this.loadCsv === "function") {
+      let puzzles = await this.loadCsv(opts);
+      const min = opts.difficultyMin != null ? opts.difficultyMin : 0;
+      const max = opts.difficultyMax != null ? opts.difficultyMax : 3500;
+      puzzles = puzzles.filter((p) => p.rating >= min && p.rating <= max);
+      if (opts.opening)
+        puzzles = puzzles.filter((p) => p.openingTags?.includes(opts.opening));
+      const themeList = Array.isArray(opts.themes)
+        ? opts.themes.filter(Boolean)
+        : String(opts.themes ?? "")
+            .split(/[,\s]+/)
+            .filter(Boolean);
+      for (const t of themeList)
+        puzzles = puzzles.filter((p) => p.themes?.includes(t));
+      puzzles = puzzles.filter((p) => !excludeSet.has(p.id));
+      if (!puzzles.length) return null;
+      const idx = Math.floor(Math.random() * puzzles.length);
+      return puzzles[idx] || null;
+    }
+
+    const params = this.buildParams(opts);
     let attempts = 5;
     while (attempts-- > 0) {
       const r = await fetch(`/api/puzzle?${params.toString()}`, {
@@ -66,7 +87,6 @@ export class PuzzleService {
     }
     return null;
   }
-
   async countFiltered(opts = {}) {
     const params = this.buildParams(opts);
     params.set("count", "1");
