@@ -1,23 +1,9 @@
 import { Chess } from "../vendor/chess.mjs";
 import { adaptLichessPuzzle } from "./PuzzleModel.js";
-import { diffToRange } from "./PuzzleService.js";
 
 function on(el, type, fn) {
   if (el) el.addEventListener(type, fn);
 }
-
-const DIFF_LABELS = [
-  "Easiest",
-  "Very Easy",
-  "Easy",
-  "Casual",
-  "Medium",
-  "Challenging",
-  "Hard",
-  "Very Hard",
-  "Expert",
-  "Legendary",
-];
 
 const THEMES = [
   "advancedPawn",
@@ -173,10 +159,22 @@ export class PuzzleUI {
     on(d.openingSel, "change", () => this.updateFilterCount());
     on(d.themeSel, "change", () => this.updateFilterCount());
 
+    if (d.difficultyMin && d.difficultyMax) {
+      const opts = ['<option value="">∞</option>'];
+      for (let i = 0; i <= 3500; i += 100) {
+        opts.push(`<option value="${i}">${i}</option>`);
+      }
+      const html = opts.join("");
+      d.difficultyMin.innerHTML = html;
+      d.difficultyMax.innerHTML = html;
+    }
+
+    const parseVal = (el) =>
+      el && el.value !== "" ? parseInt(el.value, 10) : null;
     const updateDiffLabel = (src) => {
-      let minVal = parseInt(d.difficultyMin?.value || "1", 10);
-      let maxVal = parseInt(d.difficultyMax?.value || "10", 10);
-      if (minVal > maxVal) {
+      let minVal = parseVal(d.difficultyMin);
+      let maxVal = parseVal(d.difficultyMax);
+      if (minVal != null && maxVal != null && minVal > maxVal) {
         if (src === "min") {
           maxVal = minVal;
           if (d.difficultyMax) d.difficultyMax.value = String(maxVal);
@@ -185,65 +183,30 @@ export class PuzzleUI {
           if (d.difficultyMin) d.difficultyMin.value = String(minVal);
         }
       }
-      if (d.difficultyTrack) {
-        const left = ((minVal - 1) / 9) * 100;
-        const right = ((maxVal - 1) / 9) * 100;
-        d.difficultyTrack.style.left = left + "%";
-        d.difficultyTrack.style.width = Math.max(0, right - left) + "%";
-      }
       if (d.difficultyLabel) {
-        const [minRating] = diffToRange(minVal);
-        const [, maxRating] = diffToRange(maxVal);
-        const name =
-          minVal === maxVal
-            ? DIFF_LABELS[minVal - 1] || ""
-            : `${DIFF_LABELS[minVal - 1] || ""}–${
-                DIFF_LABELS[maxVal - 1] || ""
-              }`;
-        d.difficultyLabel.textContent = `${name} (${minRating}-${maxRating})`;
+        let text = "Any";
+        if (minVal != null && maxVal != null) text = `${minVal}-${maxVal}`;
+        else if (minVal != null) text = `≥${minVal}`;
+        else if (maxVal != null) text = `≤${maxVal}`;
+        d.difficultyLabel.textContent = text;
       }
     };
     const syncDiffEnabled = () => {
       const enabled = d.difficultyFilter?.checked;
       if (d.difficultyMin) d.difficultyMin.disabled = !enabled;
       if (d.difficultyMax) d.difficultyMax.disabled = !enabled;
-      if (d.difficultyTrack)
-        d.difficultyTrack.style.display = enabled ? "" : "none";
       if (enabled) updateDiffLabel();
       else if (d.difficultyLabel) d.difficultyLabel.textContent = "Any";
       this.updateFilterCount();
     };
     on(d.difficultyFilter, "change", syncDiffEnabled);
-    on(d.difficultyMin, "input", () => {
+    on(d.difficultyMin, "change", () => {
       updateDiffLabel("min");
       this.updateFilterCount();
     });
-    on(d.difficultyMax, "input", () => {
+    on(d.difficultyMax, "change", () => {
       updateDiffLabel("max");
       this.updateFilterCount();
-    });
-    on(d.difficultySlider, "pointerdown", (e) => {
-      if (!d.difficultyFilter?.checked) return;
-      if (e.target === d.difficultyMin || e.target === d.difficultyMax) return;
-      const rect = d.difficultySlider.getBoundingClientRect();
-      const percent = Math.min(
-        Math.max(0, (e.clientX - rect.left) / rect.width),
-        1,
-      );
-      const value = Math.round(percent * 9) + 1;
-      let minVal = parseInt(d.difficultyMin?.value || "1", 10);
-      let maxVal = parseInt(d.difficultyMax?.value || "10", 10);
-      if (Math.abs(value - minVal) <= Math.abs(value - maxVal)) {
-        minVal = Math.min(value, maxVal);
-        if (d.difficultyMin) d.difficultyMin.value = String(minVal);
-        updateDiffLabel("min");
-      } else {
-        maxVal = Math.max(value, minVal);
-        if (d.difficultyMax) d.difficultyMax.value = String(maxVal);
-        updateDiffLabel("max");
-      }
-      this.updateFilterCount();
-      e.preventDefault();
     });
     syncDiffEnabled();
   }
@@ -251,12 +214,10 @@ export class PuzzleUI {
   async loadFilteredRandom() {
     try {
       const diffEnabled = this.dom.difficultyFilter?.checked;
-      const diffMin = diffEnabled
-        ? parseInt(this.dom.difficultyMin?.value || "1", 10)
-        : null;
-      const diffMax = diffEnabled
-        ? parseInt(this.dom.difficultyMax?.value || "10", 10)
-        : null;
+      const parseVal = (el) =>
+        el && el.value !== "" ? parseInt(el.value, 10) : null;
+      const diffMin = diffEnabled ? parseVal(this.dom.difficultyMin) : null;
+      const diffMax = diffEnabled ? parseVal(this.dom.difficultyMax) : null;
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
@@ -300,12 +261,10 @@ export class PuzzleUI {
     if (!this.dom?.puzzleCount) return;
     try {
       const diffEnabled = this.dom.difficultyFilter?.checked;
-      const diffMin = diffEnabled
-        ? parseInt(this.dom.difficultyMin?.value || "1", 10)
-        : null;
-      const diffMax = diffEnabled
-        ? parseInt(this.dom.difficultyMax?.value || "10", 10)
-        : null;
+      const parseVal = (el) =>
+        el && el.value !== "" ? parseInt(el.value, 10) : null;
+      const diffMin = diffEnabled ? parseVal(this.dom.difficultyMin) : null;
+      const diffMax = diffEnabled ? parseVal(this.dom.difficultyMax) : null;
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];

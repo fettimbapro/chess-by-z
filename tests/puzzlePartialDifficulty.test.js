@@ -10,7 +10,7 @@ test("randomFiltered with minimum difficulty only", async () => {
   ];
   const origRandom = Math.random;
   Math.random = () => 0;
-  const res = await svc.randomFiltered({ difficultyMin: 2 });
+  const res = await svc.randomFiltered({ difficultyMin: 600 });
   Math.random = origRandom;
   assert.equal(res.id, "2");
 });
@@ -23,7 +23,7 @@ test("randomFiltered with maximum difficulty only", async () => {
   ];
   const origRandom = Math.random;
   Math.random = () => 0;
-  const res = await svc.randomFiltered({ difficultyMax: 2 });
+  const res = await svc.randomFiltered({ difficultyMax: 1000 });
   Math.random = origRandom;
   assert.equal(res.id, "1");
 });
