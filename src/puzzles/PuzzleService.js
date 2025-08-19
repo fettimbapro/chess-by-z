@@ -1,7 +1,7 @@
-// Service for loading puzzles from pre-sorted CSV packs.
+// Service for retrieving puzzles without downloading entire CSV packs.
+
 export class PuzzleService {
   constructor() {
-    this.cache = {};
     this.openingsIndex = null;
   }
 
@@ -21,244 +21,58 @@ export class PuzzleService {
     return this.openingsIndex;
   }
 
-  async randomFiltered({
-    difficulty,
+  buildParams({
     difficultyMin,
     difficultyMax,
     opening = "",
     themes = [],
     excludeIds = [],
   } = {}) {
-    if (Array.isArray(difficulty)) {
-      [difficultyMin, difficultyMax] = difficulty;
-    }
-    let min,
-      max,
-      diffEnabled = difficultyMin != null || difficultyMax != null;
-    if (diffEnabled) {
-      [min] =
-        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
-      [, max] =
-        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
-    }
+    const params = new URLSearchParams();
+    if (difficultyMin != null) params.set("ratingMin", difficultyMin);
+    if (difficultyMax != null) params.set("ratingMax", difficultyMax);
+    if (opening) params.set("opening", opening);
     const themeList = Array.isArray(themes)
       ? themes.filter(Boolean)
       : String(themes)
           .split(/[,\s]+/)
           .filter(Boolean);
-    const byTheme = (p) =>
-      !themeList.length ||
-      themeList.every((t) =>
-        String(p.themes || "")
-          .toLowerCase()
-          .includes(t.toLowerCase()),
-      );
-    const excludeSet = new Set(
-      Array.isArray(excludeIds)
-        ? excludeIds.filter(Boolean)
-        : [excludeIds].filter(Boolean),
-    );
-    if (opening) {
-      const idx = await this.listOpenings();
-      const files = idx[opening];
-      if (!files || !files.length) return null;
-      const fallback = [];
-      for (const f of files) {
-        const arr = await this.loadCsv(
-          `./lib/lichess_puzzle_db/opening_sort/lichess_db_puzzle_by_opening.${f}.csv`,
-        );
-        const matches = arr.filter(
-          (p) =>
-            (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
-            String(p.openingTags || "").includes(opening) &&
-            byTheme(p),
-        );
-        const filtered = excludeSet.size
-          ? matches.filter((p) => !excludeSet.has(p.id))
-          : matches;
-        if (filtered.length)
-          return filtered[(Math.random() * filtered.length) | 0];
-        fallback.push(...matches);
-      }
-      return fallback.length
-        ? fallback[(Math.random() * fallback.length) | 0]
-        : null;
-    } else {
-      let fileIdx;
-      if (!diffEnabled) {
-        fileIdx = ((Math.random() * 37) | 0) + 1;
-      } else {
-        const target = (min + max) / 2;
-        const step = 2400 / 37;
-        const idx = Math.round((target - 400) / step) + 1;
-        fileIdx = Math.max(1, Math.min(37, idx));
-      }
-      const file = String(fileIdx).padStart(3, "0");
-      const arr = await this.loadCsv(
-        `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
-      );
-      const matches = arr.filter(
-        (p) =>
-          (!diffEnabled || (p.rating >= min && p.rating <= max)) && byTheme(p),
-      );
-      if (!matches.length) return null;
-      const filtered = excludeSet.size
-        ? matches.filter((p) => !excludeSet.has(p.id))
-        : matches;
-      const pool = filtered.length ? filtered : matches;
-      return pool[(Math.random() * pool.length) | 0];
-    }
+    for (const t of themeList) params.append("theme", t);
+    const excludeList = Array.isArray(excludeIds)
+      ? excludeIds.filter(Boolean)
+      : [excludeIds].filter(Boolean);
+    for (const id of excludeList) params.append("exclude", id);
+    return params;
   }
 
-  async countFiltered({
-    difficulty,
-    difficultyMin,
-    difficultyMax,
-    opening = "",
-    themes = [],
-    excludeIds = [],
-  } = {}) {
-    if (Array.isArray(difficulty)) {
-      [difficultyMin, difficultyMax] = difficulty;
-    }
-    let min,
-      max,
-      diffEnabled = difficultyMin != null || difficultyMax != null;
-    if (diffEnabled) {
-      [min] =
-        difficultyMin != null ? diffToRange(difficultyMin) : diffToRange(1);
-      [, max] =
-        difficultyMax != null ? diffToRange(difficultyMax) : diffToRange(10);
-    }
-    const themeList = Array.isArray(themes)
-      ? themes.filter(Boolean)
-      : String(themes)
-          .split(/[,\s]+/)
-          .filter(Boolean);
-    const byTheme = (p) =>
-      !themeList.length ||
-      themeList.every((t) =>
-        String(p.themes || "")
-          .toLowerCase()
-          .includes(t.toLowerCase()),
-      );
+  async randomFiltered(opts = {}) {
+    const params = this.buildParams(opts);
     const excludeSet = new Set(
-      Array.isArray(excludeIds)
-        ? excludeIds.filter(Boolean)
-        : [excludeIds].filter(Boolean),
+      Array.isArray(opts.excludeIds)
+        ? opts.excludeIds.filter(Boolean)
+        : [opts.excludeIds].filter(Boolean),
     );
-    if (opening) {
-      const idx = await this.listOpenings();
-      const files = idx[opening];
-      if (!files || !files.length) return 0;
-      let total = 0;
-      for (const f of files) {
-        const arr = await this.loadCsv(
-          `./lib/lichess_puzzle_db/opening_sort/lichess_db_puzzle_by_opening.${f}.csv`,
-        );
-        const matches = arr.filter(
-          (p) =>
-            (!diffEnabled || (p.rating >= min && p.rating <= max)) &&
-            String(p.openingTags || "").includes(opening) &&
-            byTheme(p),
-        );
-        const filtered = excludeSet.size
-          ? matches.filter((p) => !excludeSet.has(p.id))
-          : matches;
-        total += filtered.length;
-      }
-      return total;
-    } else {
-      let fileIdx;
-      if (!diffEnabled) {
-        fileIdx = ((Math.random() * 37) | 0) + 1;
-      } else {
-        const target = (min + max) / 2;
-        const step = 2400 / 37;
-        const idx = Math.round((target - 400) / step) + 1;
-        fileIdx = Math.max(1, Math.min(37, idx));
-      }
-      const file = String(fileIdx).padStart(3, "0");
-      const arr = await this.loadCsv(
-        `./lib/lichess_puzzle_db/rating_sort/lichess_db_puzzle_sorted.${file}.csv`,
-      );
-      const matches = arr.filter(
-        (p) =>
-          (!diffEnabled || (p.rating >= min && p.rating <= max)) && byTheme(p),
-      );
-      if (!matches.length) return 0;
-      const filtered = excludeSet.size
-        ? matches.filter((p) => !excludeSet.has(p.id))
-        : matches;
-      return filtered.length;
-    }
-  }
-
-  async loadCsv(path) {
-    if (this.cache[path]) return this.cache[path];
-    const text = await (await fetch(path)).text();
-    const lines = text.trim().split(/\r?\n/);
-    const head = lines[0].split(",");
-    const idx = (k) => head.indexOf(k);
-    const iId = idx("PuzzleId"),
-      iFen = idx("FEN"),
-      iMoves = idx("Moves"),
-      iRating = idx("Rating"),
-      iThemes = idx("Themes"),
-      iGame = idx("GameUrl"),
-      iOpen = idx("OpeningTags");
-    const out = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = safeCsvSplit(lines[i], head.length);
-      out.push({
-        id: get(cols, iId),
-        fen: get(cols, iFen),
-        moves: get(cols, iMoves),
-        rating: +(get(cols, iRating) || 0),
-        themes: get(cols, iThemes) || "",
-        gameUrl: get(cols, iGame) || "",
-        openingTags: get(cols, iOpen) || "",
+    let attempts = 5;
+    while (attempts-- > 0) {
+      const r = await fetch(`/api/puzzle?${params.toString()}`, {
+        headers: { accept: "application/json" },
       });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const puzzle = await r.json();
+      if (!puzzle || !puzzle.id) return null;
+      if (!excludeSet.has(puzzle.id)) return puzzle;
     }
-    this.cache[path] = out;
-    return out;
+    return null;
   }
-}
 
-export function diffToRange(level) {
-  const base = 400;
-  const step = 300;
-  const min = base + (level - 1) * step;
-  const max = base + level * step;
-  return [min, max];
-}
-
-function get(a, i) {
-  return i >= 0 && i < a.length ? a[i] : "";
-}
-function safeCsvSplit(line, expect) {
-  const out = [];
-  let cur = "",
-    q = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch == '"') {
-      if (q && line[i + 1] == '"') {
-        cur += '"';
-        i++;
-      } else {
-        q = !q;
-      }
-      continue;
-    }
-    if (!q && ch === ",") {
-      out.push(cur);
-      cur = "";
-      continue;
-    }
-    cur += ch;
+  async countFiltered(opts = {}) {
+    const params = this.buildParams(opts);
+    params.set("count", "1");
+    const r = await fetch(`/api/puzzle?${params.toString()}`, {
+      headers: { accept: "application/json" },
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    return +data.count || 0;
   }
-  out.push(cur);
-  while (out.length < expect) out.push("");
-  return out;
 }
