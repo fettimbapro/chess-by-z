@@ -5,7 +5,7 @@
 // Override `window.PUZZLE_D1_URL` at runtime to point at your deployed worker.
 const D1_WORKER_URL =
   globalThis?.PUZZLE_D1_URL ??
-  "https://example-d1-worker.yourdomain.workers.dev";
+  "https://puzzle-db-worker.fettimbapro.workers.dev";
 
 export class PuzzleService {
   constructor() {
