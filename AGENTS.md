@@ -2,6 +2,7 @@
 
 This repository hosts the **chess-by-z** client-side chess website.
 Follow these guidelines when modifying the project.
+Refer to `system-map.md` for a high-level overview of how key files depend on one another.
 
 ## Repository layout
 
