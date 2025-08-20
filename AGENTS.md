@@ -6,10 +6,13 @@ Refer to `system-map.md` for a high-level overview of how key files depend on on
 
 ## Repository layout
 
-- Application code lives in `chess-website-uml/public/src/`.
-- Tests are in the `tests/` directory and use Node's built-in test runner.
-- Third-party or generated assets reside in `chess-website-uml/public/src/vendor/` and are generally off-limits.
-  - ESLint also ignores `chess-website-uml/public/src/engine/OpeningBook.js` and `chess-website-uml/public/src/engine/openingBookData.js`.
+- Application code lives in the top-level `src/` directory (symlinked as
+  `chess-website-uml/public/src`).
+- Tests are in `tests/` and use Node's built-in test runner.
+- Third-party or generated assets reside in `src/vendor/` and are generally
+  off-limits.
+  - ESLint also ignores `src/engine/OpeningBook.js` and
+    `src/engine/openingBookData.js`.
 
 ## Coding conventions
 
