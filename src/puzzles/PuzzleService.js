@@ -62,13 +62,16 @@ export class PuzzleService {
     });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
-    return (
+    let rows =
       data?.results ||
       data?.result?.[0]?.results ||
-      data?.result?.[0] ||
+      data?.result?.results ||
+      data?.rows ||
+      data?.row ||
       data?.result ||
-      []
-    );
+      [];
+    if (!Array.isArray(rows)) rows = [rows];
+    return rows;
   }
 
   async randomFiltered(opts = {}) {
@@ -136,7 +139,32 @@ export class PuzzleService {
     const whereClause = where.length ? `WHERE ${where.join(" AND ")}` : "";
     const sql = `SELECT PuzzleId as id, FEN as fen, Moves as moves, Rating as rating, RatingDeviation as ratingDeviation, Popularity as popularity, NbPlays as nbPlays, Themes as themes, GameUrl as gameUrl, OpeningTags as openingTags FROM puzzles ${whereClause} ORDER BY RANDOM() LIMIT 1;`;
     const rows = await this.queryD1(sql, params);
-    return rows[0] || null;
+    const row = rows[0];
+    if (!row) return null;
+
+    const norm = (name, ...alts) => {
+      const keys = [name, ...alts];
+      for (const k of keys) {
+        const found = Object.keys(row).find(
+          (rk) => rk.toLowerCase() === k.toLowerCase(),
+        );
+        if (found) return row[found];
+      }
+      return undefined;
+    };
+
+    return {
+      id: norm("id", "puzzleId"),
+      fen: norm("fen"),
+      moves: norm("moves", "solution"),
+      rating: norm("rating"),
+      ratingDeviation: norm("ratingDeviation"),
+      popularity: norm("popularity"),
+      nbPlays: norm("nbPlays"),
+      themes: norm("themes"),
+      gameUrl: norm("gameUrl"),
+      openingTags: norm("openingTags"),
+    };
   }
 
   async countFiltered(opts = {}) {
