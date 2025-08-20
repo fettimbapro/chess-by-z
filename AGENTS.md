@@ -1,6 +1,6 @@
 # Guidance for Automated Agents
 
-This repository hosts the **chess-by-z** client-side chess website.
+This repository hosts the **chess-by-z** chess website. Gameplay runs in the browser while puzzle data comes from a Cloudflare D1 database via a worker.
 Follow these guidelines when modifying the project.
 Refer to `system-map.md` for a high-level overview of how key files depend on one another.
 

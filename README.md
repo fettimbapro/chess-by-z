@@ -1,12 +1,16 @@
 # chess-by-z
 
-An open-source chess website where all processing happens client-side with no external dependencies. The project showcases a pure HTML, CSS, and JavaScript approach and serves as an experiment with code generated via ChatGPT.
+An open-source chess website hosted on GitHub Pages. Gameplay runs in the browser while puzzle data is served by a Cloudflare Worker backed by a D1 database. The project showcases a pure HTML, CSS, and JavaScript approach and serves as an experiment with code generated via ChatGPT.
 
 ## Overview
 
-- **Fully client-side**: no backend server required.
-- **Vendor-free**: aside from bundled libraries such as [chess.mjs](chess-website-uml/public/src/vendor/chess.mjs).
+- **Hosted via GitHub Pages** with puzzles queried through a Cloudflare Worker and D1 database.
+- **Browser-based**: the chess engine and UI run entirely in the user's browser.
 - **Educational**: aimed at experimenting with AI-assisted development and modern browser capabilities.
+
+## Hosting
+
+The static site is published at <https://fettimbapro.github.io/chess-by-z/>. Puzzle requests are proxied through a Cloudflare Worker that queries a D1 database (see [cloudflare/lichess-puzzle-db/worker.js](cloudflare/lichess-puzzle-db/worker.js)). To use your own backend, deploy a worker and set `window.PUZZLE_D1_URL` to its endpoint.
 
 ## Architecture
 
@@ -20,7 +24,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for a deeper dive.
 
 ## Development
 
-The client-side code requires specific cross-origin isolation headers. A small Python server is provided to serve the site with the required headers.
+The frontend requires specific cross-origin isolation headers. A small Python server is provided to serve the site with the required headers for local development.
 
 ```bash
 npm run dev
