@@ -5,7 +5,7 @@ This document outlines how the major files of the chess-by-z project depend on o
 ## App
 
 - **app/App.js** – top-level orchestrator that wires the game together.
-  - Imports core game logic (`core/Game.js`), clock (`core/Clock.js`), UI layer (`ui/BoardUI.js`, `ui/ClockPanel.js`), engine (`engine/WorkerEngine.js` and opening detection), puzzle components (`puzzles/PuzzleService.js`, `puzzles/PuzzleUI.js`), and utility sounds (`util/Sounds.js`).
+  - Imports core game logic (`core/Game.js`), clock (`core/Clock.js`), UI layer (`ui/BoardUI.js`, `ui/ClockPanel.js`), engine (`engine/WorkerEngine.js`, `engine/Openings.js`), puzzle components (`puzzles/PuzzleService.js`, `puzzles/PuzzleUI.js`), and utility sounds (`util/Sounds.js`).
 
 ## Core
 
@@ -19,10 +19,11 @@ This document outlines how the major files of the chess-by-z project depend on o
 - **engine/EngineTuner.js** – adjusts engine parameters and relies on `engine/RuntimeCaps.js`.
 - **engine/boot.js** – bootstraps the engine using `engine/Adapter.js`, `engine/EngineTuner.js`, and `engine/OpeningBook.js`.
 - **engine/OpeningBook.js** – reads opening move data from `engine/openingBookData.js`.
+- **engine/Openings.js** – lightweight opening name detector used by the app.
 
 ## Puzzles
 
-- **puzzles/PuzzleService.js** – fetches puzzles from external sources; no internal imports.
+- **puzzles/PuzzleService.js** – fetches puzzles from external sources and loads opening names from `lib/lichess_puzzle_db/openings_index.json`; no internal imports.
 - **puzzles/PuzzleUI.js** – puzzle interaction layer built on `vendor/chess.mjs` and model helpers from `puzzles/PuzzleModel.js`.
 - **puzzles/PuzzleModel.js** – adapts puzzle data and depends on `vendor/chess.mjs`.
 

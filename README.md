@@ -14,19 +14,29 @@ The static site is published at <https://fettimbapro.github.io/chess-by-z/>. Puz
 
 ## Architecture
 
-Source code lives under `chess-website-uml/public` and is organized into:
+Source code lives in the top-level `src/` directory (symlinked from
+`chess-website-uml/public/src` for the GitHub Pages build) and is organized
+into:
 
-- `src/app` – application bootstrap and high-level controllers
-- `src/ui` – DOM rendering and user interaction helpers
-- `src/vendor` – third-party libraries bundled with the project
+- `app/` – application bootstrap and high-level controllers
+- `core/` – game state wrapper and chess clock
+- `engine/` – browser chess engine, evaluation helpers, and opening detection
+- `puzzles/` – puzzle fetching, filtering, and UI helpers
+- `ui/` – DOM rendering and user interaction helpers
+- `util/` – shared utilities
+- `workers/` – web worker entry points for engine variants
+- `vendor/` – third-party libraries bundled with the project
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a deeper dive.
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [system-map.md](system-map.md) for
+deeper dives into these modules.
 
 ## Development
 
-The frontend requires specific cross-origin isolation headers. A small Python server is provided to serve the site with the required headers for local development.
+Install dependencies and start the local development server, which applies the
+necessary cross-origin isolation headers:
 
 ```bash
+npm install
 npm run dev
 ```
 
@@ -40,11 +50,13 @@ For consistent chess piece rendering across platforms, download the [DejaVu Sans
 
 By default the site runs the original lightweight engine. For a stronger engine with enhanced evaluation you can append `?engine=strong` to the URL (e.g. `http://127.0.0.1:8080/?engine=strong`). This makes it easy to A/B test the classic and strong engines.
 
-## Testing
+## Testing & Linting
 
-Unit tests are written with the built-in Node.js test runner.
+Use ESLint for code style checks and Node's built-in test runner for unit
+tests.
 
 ```bash
+npm run lint
 npm test
 ```
 
