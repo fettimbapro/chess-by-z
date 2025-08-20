@@ -111,7 +111,6 @@ export class App {
         hintBtn: qs("#puzzleHint"),
         openingSel: qs("#openingFilter"),
         themeSel: qs("#themeFilter"),
-        difficultyFilter: qs("#difficultyFilter"),
         difficultyMin: qs("#difficultyMin"),
         difficultyMax: qs("#difficultyMax"),
         difficultyLabel: qs("#difficultyLabel"),
