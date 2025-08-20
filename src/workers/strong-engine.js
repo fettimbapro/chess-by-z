@@ -145,6 +145,11 @@ function pushKiller(uci, ply) {
   }
 }
 
+// Transposition table key ignoring halfmove/fullmove counters
+function ttKey(ch) {
+  return ch.fen().split(" ").slice(0, 4).join(" ");
+}
+
 function orderMoves(list, ttUci, ply, ch) {
   const ks = killers[ply] || [];
   return list
@@ -556,8 +561,8 @@ function timeUp() {
 }
 
 function search(ch, depth, alpha, beta, ply) {
-  // TT probe
-  const key = ch.fen(); // includes side/castling/EP
+  // TT probe with normalized key
+  const key = ttKey(ch);
   const tte = TT.get(key);
   if (tte && tte.depth >= depth) {
     const s = tte.score;
