@@ -1,57 +1,52 @@
 export default {
   async fetch(request, env) {
-    const ORIGIN = 'https://fettimbapro.github.io';
+    const ORIGIN = "https://fettimbapro.github.io";
 
     // CORS preflight
-    if (request.method === 'OPTIONS') {
+    if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
-          'Access-Control-Allow-Origin': ORIGIN,
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Max-Age': '86400',
+          "Access-Control-Allow-Origin": ORIGIN,
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400",
         },
       });
     }
 
-    if (request.method !== 'GET' && request.method !== 'POST') {
-      return new Response('Method Not Allowed', {
+    if (request.method !== "POST") {
+      return new Response("Method Not Allowed", {
         status: 405,
-        headers: { 'Access-Control-Allow-Origin': ORIGIN },
+        headers: { "Access-Control-Allow-Origin": ORIGIN },
       });
     }
+
+    const headers = {
+      "Access-Control-Allow-Origin": ORIGIN,
+      "Content-Type": "application/json",
+    };
 
     try {
-      // One random row from `puzzles`
-      const { results } = await env.DB
-        .prepare('SELECT * FROM puzzles ORDER BY RANDOM() LIMIT 1')
-        .all();
-
-      if (!results || results.length === 0) {
-        return new Response(JSON.stringify({ ok: false, error: 'No rows in puzzles' }), {
-          status: 404,
-          headers: {
-            'Access-Control-Allow-Origin': ORIGIN,
-            'Content-Type': 'application/json',
-          },
-        });
+      const { sql, params } = await request.json();
+      if (!sql) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Missing sql" }),
+          { status: 400, headers },
+        );
       }
 
-      return new Response(JSON.stringify({ ok: true, row: results[0] }), {
-        headers: {
-          'Access-Control-Allow-Origin': ORIGIN,
-          'Content-Type': 'application/json',
-        },
+      let stmt = env.DB.prepare(sql);
+      if (Array.isArray(params) && params.length) stmt = stmt.bind(...params);
+      const { results } = await stmt.all();
+
+      return new Response(JSON.stringify({ ok: true, results }), {
+        headers,
       });
     } catch (err) {
       return new Response(JSON.stringify({ ok: false, error: String(err) }), {
         status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': ORIGIN,
-          'Content-Type': 'application/json',
-        },
+        headers,
       });
     }
   },
 };
-
