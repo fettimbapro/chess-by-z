@@ -191,6 +191,7 @@ export class App {
     this.refreshAll();
     this.updateModeButtonStyles();
     this.updateSwitchButtonVisibility();
+    this.updateAdvancedControlsVisibility();
 
     // Do NOT start clocks yet; only after the human makes their first move.
     if (this.modeSel.value === "play") {
@@ -238,6 +239,7 @@ export class App {
       this.applyOrientation();
       this.updateModeButtonStyles();
       this.updateSwitchButtonVisibility();
+      this.updateAdvancedControlsVisibility();
     });
 
     this.sideSel.addEventListener("change", () => {
@@ -351,6 +353,14 @@ export class App {
       this.confirmRestart = false;
       this.switchBtn.classList.remove("confirm");
     }
+  }
+
+  updateAdvancedControlsVisibility() {
+    const show = this.modeSel.value === "play";
+    const adv = document.getElementById("advancedControls");
+    if (!adv) return;
+    adv.style.display = show ? "" : "none";
+    if (!show) adv.open = false;
   }
 
   updateSwitchButtonText() {
