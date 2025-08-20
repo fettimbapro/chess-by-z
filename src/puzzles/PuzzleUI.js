@@ -195,15 +195,6 @@ export class PuzzleUI {
         d.difficultyLabel.textContent = text;
       }
     };
-    const syncDiffEnabled = () => {
-      const enabled = d.difficultyFilter?.checked;
-      if (d.difficultyMin) d.difficultyMin.disabled = !enabled;
-      if (d.difficultyMax) d.difficultyMax.disabled = !enabled;
-      if (enabled) updateDiffLabel();
-      else if (d.difficultyLabel) d.difficultyLabel.textContent = "Any";
-      this.updateFilterCount();
-    };
-    on(d.difficultyFilter, "change", syncDiffEnabled);
     on(d.difficultyMin, "change", () => {
       updateDiffLabel("min");
       this.updateFilterCount();
@@ -212,17 +203,16 @@ export class PuzzleUI {
       updateDiffLabel("max");
       this.updateFilterCount();
     });
-    syncDiffEnabled();
+    updateDiffLabel();
   }
 
   async loadFilteredRandom() {
     this.showLoading(true);
     try {
-      const diffEnabled = this.dom.difficultyFilter?.checked;
       const parseVal = (el) =>
         el && el.value !== "" ? parseInt(el.value, 10) : null;
-      const diffMin = diffEnabled ? parseVal(this.dom.difficultyMin) : null;
-      const diffMax = diffEnabled ? parseVal(this.dom.difficultyMax) : null;
+      const diffMin = parseVal(this.dom.difficultyMin);
+      const diffMax = parseVal(this.dom.difficultyMax);
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
@@ -267,11 +257,10 @@ export class PuzzleUI {
   async updateFilterCount() {
     if (!this.dom?.puzzleCount) return;
     try {
-      const diffEnabled = this.dom.difficultyFilter?.checked;
       const parseVal = (el) =>
         el && el.value !== "" ? parseInt(el.value, 10) : null;
-      const diffMin = diffEnabled ? parseVal(this.dom.difficultyMin) : null;
-      const diffMax = diffEnabled ? parseVal(this.dom.difficultyMax) : null;
+      const diffMin = parseVal(this.dom.difficultyMin);
+      const diffMax = parseVal(this.dom.difficultyMax);
       const opening = this.dom.openingSel?.value || "";
       const theme = this.dom.themeSel?.value || "";
       const themes = theme ? [theme] : [];
