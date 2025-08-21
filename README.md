@@ -50,6 +50,16 @@ For consistent chess piece rendering across platforms, download the [DejaVu Sans
 
 By default the site runs the original lightweight engine. For a stronger engine with enhanced evaluation you can append `?engine=strong` to the URL (e.g. `http://127.0.0.1:8080/?engine=strong`). This makes it easy to A/B test the classic and strong engines.
 
+### Simulating engine matches in the browser
+
+The engine exposes a helper for running multiple **strong vs. classic** matches at once. After starting the development server and opening the site, run the following in the browser console:
+
+```js
+await runMatches(10); // run 10 simultaneous matches
+```
+
+Each match logs its move list and final PGN, grouped in the console. Omit the numeric argument to use the default of 10 matches.
+
 ## Testing & Linting
 
 Use ESLint for code style checks and Node's built-in test runner for unit
