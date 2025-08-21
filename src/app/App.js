@@ -620,6 +620,9 @@ export class App {
       // 1) Try the opening book first
       const san = await this.askBookMove();
       if (san) {
+        // Delay book moves slightly to mimic thinking time
+        const delay = 500 + Math.random() * 1000;
+        await new Promise((r) => setTimeout(r, delay));
         const mv = this.game.moveSan(san);
         if (mv) {
           this.clock.onMoveApplied?.();
