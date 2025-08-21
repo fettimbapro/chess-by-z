@@ -58,7 +58,7 @@ The engine exposes a helper for running multiple **strong vs. classic** matches 
 await runMatches(10); // run 10 simultaneous matches
 ```
 
-Each match logs its move list and final FEN, grouped in the console. Omit the numeric argument to use the default of 10 matches.
+Each match logs its move list and final PGN, grouped in the console. Omit the numeric argument to use the default of 10 matches.
 
 ## Testing & Linting
 

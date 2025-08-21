@@ -11,20 +11,20 @@ async function runMatch(id) {
   const log = [];
 
   while (!game.isGameOver()) {
-    const move = await side.play(game.fen());
-    if (!move) {
+    const moveUci = await side.play(game.fen());
+    if (!moveUci) {
       log.push(
         `ply ${ply}: ${side === strong ? "strong" : "weak"} had no legal move`,
       );
       break;
     }
     game.move({
-      from: move.slice(0, 2),
-      to: move.slice(2, 4),
-      promotion: move[4],
+      from: moveUci.slice(0, 2),
+      to: moveUci.slice(2, 4),
+      promotion: moveUci[4],
     });
     log.push(
-      `ply ${ply}: ${side === strong ? "strong" : "weak"} -> ${move} | FEN: ${game.fen()}`,
+      `ply ${ply}: ${side === strong ? "strong" : "weak"} -> ${moveUci}`,
     );
     side = side === strong ? weak : strong;
     ply++;
@@ -39,7 +39,7 @@ async function runMatch(id) {
   strong.worker.terminate();
   weak.worker.terminate();
 
-  return { id, result, finalFen: game.fen(), log };
+  return { id, result, pgn: game.pgn(), log };
 }
 
 export async function runMatches(n = 10) {
@@ -54,7 +54,7 @@ export async function runMatches(n = 10) {
   for (const match of results) {
     console.group(`Match ${match.id}: ${match.result}`);
     match.log.forEach((line) => console.log(line));
-    console.log(`Final FEN: ${match.finalFen}`);
+    console.log(`PGN: ${match.pgn}`);
     console.groupEnd();
   }
 
