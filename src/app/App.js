@@ -8,7 +8,7 @@ import { ClockPanel } from "../ui/ClockPanel.js";
 import { detectOpening } from "../engine/Openings.js";
 import { Chess } from "../vendor/chess.mjs";
 import { Sounds } from "../util/Sounds.js";
-import { formatScore } from "../util/format.js";
+import { formatScore, scoreToPct } from "../util/format.js";
 
 const qs = (s) => document.querySelector(s);
 
@@ -722,8 +722,7 @@ export class App {
 
   updateEvalFromCp(cp) {
     if (!Number.isFinite(cp) || Math.abs(cp) >= 1e7) return;
-    const clamped = Math.max(-1000, Math.min(1000, cp | 0));
-    const pct = 50 + clamped / 20;
+    const pct = scoreToPct(cp, this.game.turn()) * 100;
     this.evalbar.style.display = "block";
     this.evalWhite.style.height = `${Math.max(0, Math.min(100, pct))}%`;
     this.evalBlack.style.height = `${Math.max(0, Math.min(100, 100 - pct))}%`;
