@@ -25,6 +25,13 @@ export class Sounds {
           gain: 0.12,
           type: "triangle",
         },
+        fart: {
+          filter: 200,
+          osc: 80,
+          dur: 0.5,
+          gain: 0.2,
+          type: "sawtooth",
+        },
       };
 
       const fartProfiles = [
