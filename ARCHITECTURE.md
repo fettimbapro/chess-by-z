@@ -21,6 +21,9 @@ Supporting directories:
 
 - **cloudflare/** – Cloudflare Workers for the puzzle API and logging.
 - **lib/** – static data such as the puzzle opening index.
+- **tools/** – build scripts. `node tools/buildOpeningBook.js` parses the
+  Lichess PGN dumps in `lib/lichess_opening_db` and updates
+  `src/engine/openingBookData.js`.
 
 For local development a lightweight Python script (`serve.py`) adds the
 required security headers for cross-origin isolation. In production the static
