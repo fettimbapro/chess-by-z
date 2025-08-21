@@ -907,4 +907,16 @@ export class App {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => new App());
+if (
+  typeof window !== "undefined" &&
+  typeof document !== "undefined" &&
+  typeof document.querySelector === "function" &&
+  typeof document.querySelectorAll === "function" &&
+  typeof window.addEventListener === "function"
+) {
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", () => new App());
+  } else {
+    new App();
+  }
+}
