@@ -25,8 +25,16 @@ export class Sounds {
           gain: 0.12,
           type: "triangle",
         },
+        fart: {
+          filter: 200,
+          osc: 80,
+          dur: 0.5,
+          gain: 0.2,
+          type: "sawtooth",
+        },
       };
-      const p = profiles[name] || profiles.move;
+      const p =
+        (window?.secretMode ? profiles.fart : profiles[name]) || profiles.move;
 
       const gain = ctx.createGain();
       const maxGain = p.gain ?? 0.09;
