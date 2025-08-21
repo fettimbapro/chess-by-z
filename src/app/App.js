@@ -6,6 +6,7 @@ import { PuzzleService } from "../puzzles/PuzzleService.js";
 import { PuzzleUI } from "../puzzles/PuzzleUI.js";
 import { ClockPanel } from "../ui/ClockPanel.js";
 import { detectOpening } from "../engine/Openings.js";
+import { Chess } from "../vendor/chess.mjs";
 import { Sounds } from "../util/Sounds.js";
 
 const qs = (s) => document.querySelector(s);
@@ -750,7 +751,16 @@ export class App {
     const sanHist = this.inReview
       ? sanHistFull.slice(0, this.reviewPly)
       : sanHistFull;
-    const openingName = detectOpening(sanHist) || "—";
+    let fen = "";
+    if (this.inReview) {
+      const tmp = new Chess();
+      for (const m of sanHist) tmp.move(m);
+      fen = tmp.fen();
+    } else if (typeof this.game.fen === "function") {
+      fen = this.game.fen();
+    }
+    const opening = detectOpening({ san: sanHist, fen });
+    const openingName = opening ? `${opening.eco} ${opening.name}` : "—";
 
     // 3) Moves (numbered, compact)
     const movesText = this.formatMoves(sanHist) || "—";
