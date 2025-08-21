@@ -22,7 +22,12 @@ export class PuzzleService {
 
   async listOpenings() {
     if (this.openingsIndex) return this.openingsIndex;
-    const r = await fetch("./lib/lichess_puzzle_db/openings_index.json");
+    // Resolve relative to this module so it works from any base path
+    const url = new URL(
+      "../../lib/lichess_puzzle_db/openings_index.json",
+      import.meta.url,
+    );
+    const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     this.openingsIndex = await r.json();
     return this.openingsIndex;
