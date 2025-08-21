@@ -856,8 +856,9 @@ export class BoardUI {
 
       if (this.selected === sq) {
         this.clearSelectionDots();
+        this.squareEl(this.selected)?.classList?.remove("sel");
+        this.dragTargets.clear();
         this.selected = null;
-        this.dragTargets = new Set();
         return;
       }
 
