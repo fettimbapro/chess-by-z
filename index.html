@@ -108,9 +108,19 @@
         text-align: center;
         font-size: 13px;
         color: var(--muted);
+        position: relative;
       }
       footer.site-footer a {
         color: var(--accent);
+      }
+
+      footer.site-footer .secret-btn {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 20px;
+        height: 20px;
+        opacity: 0;
       }
 
       /* Board section first; controls below (single column) */
@@ -752,6 +762,11 @@
           Contact:
           <a href="mailto:itsjustme@samzlotnik.se">itsjustme@samzlotnik.se</a>
         </p>
+        <button
+          id="secretMode"
+          class="secret-btn"
+          aria-label="Activate secret mode"
+        ></button>
       </footer>
     </div>
 
@@ -761,5 +776,36 @@
     <script src="./src/ui/DrawOverlay.js" defer></script>
     <script src="./src/ui/SysArrowPolicy.js" defer></script>
     <script src="./src/ui/MoveFlash.js" defer></script>
+    <script>
+      const secretBtn = document.getElementById("secretMode");
+      window.secretMode = false;
+      secretBtn?.addEventListener("click", () => {
+        const root = document.documentElement;
+        const brown = {
+          "--bg": "#3b2f2f",
+          "--layer": "#4e3d33",
+          "--muted": "#a58b6d",
+          "--text": "#f3e5d0",
+          "--square-dark": "#5c4735",
+          "--square-light": "#7a5d3e",
+          "--hl": "#d1a679",
+          "--accent": "#b3875c",
+          "--good": "#c19a6b",
+          "--bad": "#8b5a2b",
+        };
+        const active = root.dataset.secret === "1";
+        if (!active) {
+          Object.entries(brown).forEach(([k, v]) => {
+            root.style.setProperty(k, v);
+          });
+          root.dataset.secret = "1";
+          window.secretMode = true;
+        } else {
+          Object.keys(brown).forEach((k) => root.style.removeProperty(k));
+          delete root.dataset.secret;
+          window.secretMode = false;
+        }
+      });
+    </script>
   </body>
 </html>

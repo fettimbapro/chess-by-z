@@ -26,7 +26,16 @@ export class Sounds {
           type: "triangle",
         },
       };
-      const p = profiles[name] || profiles.move;
+
+      const fartProfiles = [
+        { filter: 180, osc: 60, dur: 0.8, gain: 0.28, type: "sawtooth" },
+        { filter: 150, osc: 50, dur: 0.9, gain: 0.3, type: "square" },
+        { filter: 220, osc: 70, dur: 0.6, gain: 0.25, type: "triangle" },
+      ];
+
+      const p = window.secretMode
+        ? fartProfiles[Math.floor(Math.random() * fartProfiles.length)]
+        : profiles[name] || profiles.move;
 
       const gain = ctx.createGain();
       const maxGain = p.gain ?? 0.09;
