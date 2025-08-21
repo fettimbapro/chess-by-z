@@ -3,6 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <title>Chess by Sam</title>
+    <base href="/chess-by-z/" />
+    <script>
+      const redirect = sessionStorage.redirect;
+      if (redirect) {
+        delete sessionStorage.redirect;
+        if (redirect !== location.href) {
+          history.replaceState(null, "", redirect);
+        }
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0f1216" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
@@ -583,9 +593,7 @@
             <div class="puzzlePrompt" id="puzzleLoading">
               <div class="box">
                 <div class="spinner"></div>
-                <div>
-                  Loading...
-                </div>
+                <div>Loading...</div>
               </div>
             </div>
 
