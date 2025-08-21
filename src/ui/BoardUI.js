@@ -854,6 +854,13 @@ export class BoardUI {
       const sq = sqEl.dataset.square;
       const piece = this.getPieceAt(sq);
 
+      if (this.selected === sq) {
+        this.clearSelectionDots();
+        this.selected = null;
+        this.dragTargets = new Set();
+        return;
+      }
+
       // Move if selected and target is legal
       if (this.selected && this.dragTargets.has(sq)) {
         const pieceSel = this.getPieceAt(this.selected);
