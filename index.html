@@ -778,6 +778,7 @@
     <script src="./src/ui/MoveFlash.js" defer></script>
     <script>
       const secretBtn = document.getElementById("secretMode");
+      window.secretMode = false;
       secretBtn?.addEventListener("click", () => {
         const root = document.documentElement;
         const brown = {
@@ -794,9 +795,9 @@
         };
         const active = root.dataset.secret === "1";
         if (!active) {
-          Object.entries(brown).forEach(([k, v]) =>
-            root.style.setProperty(k, v),
-          );
+          Object.entries(brown).forEach(([k, v]) => {
+            root.style.setProperty(k, v);
+          });
           root.dataset.secret = "1";
           window.secretMode = true;
         } else {
