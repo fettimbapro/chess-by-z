@@ -5,6 +5,7 @@
 import { EngineAdapter } from "./Adapter.js";
 import { EngineTuner } from "./EngineTuner.js";
 import { getBookMove } from "./OpeningBook.js";
+import "./runMatches.js";
 
 const $ = (id) => document.getElementById(id);
 
