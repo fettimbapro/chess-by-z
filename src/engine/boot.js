@@ -29,11 +29,20 @@ function collectDom() {
 }
 
 function initBook(dom) {
+  let bookEnabled = !!dom.useBook?.checked;
+  dom.useBook?.addEventListener("change", () => {
+    bookEnabled = !!dom.useBook.checked;
+  });
+
   // Listen to book requests coming from your App (if it emits them)
-  window.addEventListener("book-request", (ev) => {
+  window.addEventListener("book-request", async (ev) => {
     const { sanHistory = "", ply = 0, mode = "play" } = ev.detail || {};
-    const enabled = !!dom.useBook?.checked;
-    const san = getBookMove({ sanHistory, ply, mode, enabled });
+    const san = await getBookMove({
+      sanHistory,
+      ply,
+      mode,
+      enabled: bookEnabled,
+    });
     if (san)
       window.dispatchEvent(new CustomEvent("book-move", { detail: { san } }));
   });
