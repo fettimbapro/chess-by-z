@@ -1,5 +1,11 @@
 [
   {
+    "eco": "C30",
+    "name": "King's Gambit Accepted",
+    "san": "e4 e5 f4 exf4",
+    "fen": "rnbqkbnr/pppp1ppp/8/8/4Pp2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3"
+  },
+  {
     "eco": "C67",
     "name": "Ruy Lopez: Berlin Defense, Rio Gambit Accepted",
     "san": "e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 Re1 Nd6 Nxe5 Be7 Bf1 Nxe5 Rxe5 O-O",
