@@ -589,7 +589,11 @@ export class App {
   // === Opening book: ask boot.js for a SAN move before calling the engine
   askBookMove() {
     return new Promise((resolve) => {
-      const onMove = (ev) => resolve(ev?.detail?.san || null);
+      let timeout;
+      const onMove = (ev) => {
+        clearTimeout(timeout);
+        resolve(ev?.detail?.san || null);
+      };
       window.addEventListener("book-move", onMove, { once: true });
       const hist = this.getSanHistory();
       window.dispatchEvent(
@@ -601,7 +605,10 @@ export class App {
           },
         }),
       );
-      setTimeout(() => resolve(null), 25); // tolerate missing listener
+      timeout = setTimeout(() => {
+        window.removeEventListener("book-move", onMove);
+        resolve(null);
+      }, 200); // tolerate missing listener
     });
   }
 
