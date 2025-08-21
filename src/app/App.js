@@ -68,6 +68,9 @@ export class App {
     this.engine = new WorkerEngine({ variant: engineVariant });
     this.sounds = new Sounds();
 
+    // Base path for routing (e.g., "", "/", or "/subdir/")
+    this.basePath = window.location.pathname.replace(/\/puzzles\/?$/, "/");
+
     // Clock UI
     this.clockPanel = new ClockPanel({ clock: this.clock, els: clockEls });
     this.clock.onFlag = (side) => {
@@ -141,6 +144,12 @@ export class App {
     // Init
     this.bindControls();
     this.bindReviewHotkeys();
+
+    const initialMode = /\/puzzles\/?$/.test(window.location.pathname)
+      ? "puzzle"
+      : "play";
+    this.setMode(initialMode);
+    this.updateUrlMode();
 
     // --- Drawing hotkeys ---
     window.addEventListener("keydown", (e) => {
@@ -240,6 +249,7 @@ export class App {
       this.updateModeButtonStyles();
       this.updateSwitchButtonVisibility();
       this.updateAdvancedControlsVisibility();
+      this.updateUrlMode();
     });
 
     this.sideSel.addEventListener("change", () => {
@@ -381,6 +391,16 @@ export class App {
     if (this.modeSel.value === mode) return;
     this.modeSel.value = mode;
     this.modeSel.dispatchEvent(new Event("change"));
+  }
+
+  updateUrlMode() {
+    const path =
+      this.modeSel.value === "puzzle"
+        ? this.basePath + "puzzles"
+        : this.basePath;
+    if (window.location.pathname !== path) {
+      history.replaceState(null, "", path + window.location.search);
+    }
   }
 
   updateModeButtonStyles() {
