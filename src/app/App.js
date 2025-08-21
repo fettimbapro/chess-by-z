@@ -8,6 +8,7 @@ import { ClockPanel } from "../ui/ClockPanel.js";
 import { detectOpening } from "../engine/Openings.js";
 import { Chess } from "../vendor/chess.mjs";
 import { Sounds } from "../util/Sounds.js";
+import { formatScore } from "../util/format.js";
 
 const qs = (s) => document.querySelector(s);
 
@@ -692,7 +693,7 @@ export class App {
       this.pvBox.innerHTML = (lines || [])
         .map(
           (it, i) =>
-            `<div>PV${i + 1}: <b>${(it.scoreCp / 100).toFixed(2)}</b> — <span class="muted">${(it.san || []).join(" ")}</span></div>`,
+            `<div>PV${i + 1}: <b>${formatScore(it.scoreCp)}</b> — <span class="muted">${(it.san || []).join(" ")}</span></div>`,
         )
         .join("");
     } catch (e) {
@@ -720,6 +721,7 @@ export class App {
   }
 
   updateEvalFromCp(cp) {
+    if (!Number.isFinite(cp) || Math.abs(cp) >= 1e7) return;
     const clamped = Math.max(-1000, Math.min(1000, cp | 0));
     const pct = 50 + clamped / 20;
     this.evalbar.style.display = "block";
