@@ -18,18 +18,28 @@ export class WorkerEngine extends Engine {
       const msg = e.data || {};
       const pend = this.waiting.get(msg.id);
       if (!pend) return;
-      if (msg.type === "analysis") pend.resolve(msg.lines);
-      else if (msg.type === "bestmove") pend.resolve(msg.uci);
-      else pend.reject(new Error("Unknown response"));
-      this.waiting.delete(msg.id);
+      if (msg.type === "analysis") {
+        if (msg.final) {
+          pend.resolve(msg.lines);
+          this.waiting.delete(msg.id);
+        } else {
+          pend.onProgress?.(msg.lines, msg.depth);
+        }
+      } else if (msg.type === "bestmove") {
+        pend.resolve(msg.uci);
+        this.waiting.delete(msg.id);
+      } else {
+        pend.reject(new Error("Unknown response"));
+        this.waiting.delete(msg.id);
+      }
     };
   }
 
-  _postAwait(payload) {
+  _postAwait(payload, { onProgress } = {}) {
     const id = ++this.req;
     payload.id = id;
     const p = new Promise((resolve, reject) =>
-      this.waiting.set(id, { resolve, reject }),
+      this.waiting.set(id, { resolve, reject, onProgress }),
     );
     this.worker.postMessage(payload);
     return p;
@@ -44,6 +54,7 @@ export class WorkerEngine extends Engine {
       timeLeftMs,
       incrementMs = 0,
       movesToGo = 30,
+      onProgress,
     } = {},
   ) {
     if (typeof timeLeftMs === "number") {
@@ -55,7 +66,10 @@ export class WorkerEngine extends Engine {
         complexity: comp,
       });
     }
-    return this._postAwait({ type: "analyze", fen, depth, multipv, timeMs });
+    return this._postAwait(
+      { type: "analyze", fen, depth, multipv, timeMs },
+      { onProgress },
+    );
   }
   play(
     fen,

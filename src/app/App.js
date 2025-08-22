@@ -682,6 +682,9 @@ export class App {
         depth: parseInt(this.depth.value, 10),
         multipv: parseInt(this.multipv.value, 10),
         timeMs: window.engineTuner?.lastMovetime || 300,
+        onProgress: (ls) => {
+          if (ls && ls[0]) this.updateEvalFromCp(ls[0].scoreCp);
+        },
       });
       this.ui.clearArrow?.();
       (lines || []).forEach((l, i) => {
@@ -710,6 +713,9 @@ export class App {
         depth: Math.max(2, parseInt(this.depth.value, 10)),
         multipv: 1,
         timeMs: window.engineTuner?.lastMovetime || 300,
+        onProgress: (ls) => {
+          if (ls && ls[0]) this.updateEvalFromCp(ls[0].scoreCp);
+        },
       });
       if (lines && lines[0]?.firstUci) this.ui.drawArrowUci(lines[0].firstUci);
       if (lines && lines[0]) this.updateEvalFromCp(lines[0].scoreCp);
