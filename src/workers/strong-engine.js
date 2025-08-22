@@ -705,7 +705,7 @@ function search(ch, depth, alpha, beta, ply) {
 }
 
 // Root iterative deepening with aspiration windows
-function analyzeRoot(fen, depth, multipv) {
+function analyzeRoot(fen, depth, multipv, id) {
   killers.length = 0;
   history.clear();
 
@@ -718,6 +718,7 @@ function analyzeRoot(fen, depth, multipv) {
 
   let scores = new Map();
   let bestSoFar = 0;
+  let lines = [];
 
   for (let d = 1; d <= depth && !stopFlag && !timeUp(); d++) {
     let A = -INF,
@@ -752,28 +753,31 @@ function analyzeRoot(fen, depth, multipv) {
       if (sc > localBest) localBest = sc;
     }
     bestSoFar = localBest;
-  }
 
-  const ranked = [...scores.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, Math.max(1, multipv | 0));
-  const lines = [];
-  for (const [uci, _sc] of ranked) {
-    root.move({
-      from: uci.slice(0, 2),
-      to: uci.slice(2, 4),
-      promotion: uci[4],
-    });
-    const child = search(root, Math.max(0, depth - 1), -INF, INF, 1);
-    root.undo();
-    const pv = [uci].concat(child.pv || []);
-    lines.push({
-      firstUci: uci,
-      scoreCp: -child.score | 0,
-      pv,
-      san: pvToSan(fen, pv),
-    });
-    if (stopFlag || timeUp()) break;
+    const ranked = [...scores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, Math.max(1, multipv | 0));
+    lines = [];
+    for (const [uci, _sc] of ranked) {
+      root.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci[4],
+      });
+      const child = search(root, Math.max(0, d - 1), -INF, INF, 1);
+      root.undo();
+      const pv = [uci].concat(child.pv || []);
+      lines.push({
+        firstUci: uci,
+        scoreCp: -child.score | 0,
+        pv,
+        san: pvToSan(fen, pv),
+      });
+      if (stopFlag || timeUp()) break;
+    }
+    if (id !== undefined) {
+      postMessage({ type: "analysis", id, lines, depth: d });
+    }
   }
   return lines;
 }
@@ -810,8 +814,8 @@ onmessage = (e) => {
     stopFlag = false;
     const depth = Math.max(1, msg.depth | 0),
       k = Math.max(1, msg.multipv | 0);
-    const lines = analyzeRoot(msg.fen, depth, k);
-    postMessage({ type: "analysis", id: msg.id, lines, depth });
+    const lines = analyzeRoot(msg.fen, depth, k, msg.id);
+    postMessage({ type: "analysis", id: msg.id, lines, depth, final: true });
   } else if (msg.type === "play") {
     const d = Math.max(1, msg.depthCap | 0);
     const uci = chooseMoveForPlay(msg.fen, d, msg.elo | 0, msg.timeMs | 0);
