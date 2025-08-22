@@ -285,6 +285,10 @@ export class BoardUI {
     this.dragGhost = null;
     this.hoverSq = null;
 
+    // when picking up a piece and releasing on the same square without
+    // dragging, ignore the subsequent click to keep the piece selected
+    this._ignoreNextClick = false;
+
     // celebration state
     this._celebrationRoot = null;
     this._celebrationTimer = null;
@@ -693,6 +697,7 @@ export class BoardUI {
       this.selected = from;
       this.clearSelectionDots();
       this.markSelected(from, this.dragTargets);
+      this._ignoreNextClick = true;
 
       sqEl.classList.add("dragSource");
 
@@ -716,6 +721,7 @@ export class BoardUI {
       const dy = e.clientY - this.dragStart.y0;
       if (dx * dx + dy * dy < 9) return;
       this.dragStarted = true;
+      this._ignoreNextClick = false;
       if (this.dragGhost) {
         this.dragGhost.textContent = this.dragStart.glyph;
         this.dragGhost.classList.add(
@@ -848,7 +854,14 @@ export class BoardUI {
         return;
       }
       this._preJustQueued = null;
-      if (this.cancelPreMove?.()) return;
+      if (this.cancelPreMove?.()) {
+        this._ignoreNextClick = false;
+        return;
+      }
+      if (this._ignoreNextClick) {
+        this._ignoreNextClick = false;
+        return;
+      }
       const sqEl = e.target.closest(".sq");
       if (!sqEl) return;
       const sq = sqEl.dataset.square;
