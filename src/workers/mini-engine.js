@@ -568,7 +568,7 @@ function search(ch, depth, alpha, beta, ply) {
       return { score: s, pv: [], best: tte.best };
   }
 
-  if (stopFlag || timeUp()) return { score: alpha, pv: [], best: null };
+  if (stopFlag || timeUp()) return { score: evalBoard(ch), pv: [], best: null };
 
   const inChk = inCheck(ch);
 
