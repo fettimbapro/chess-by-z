@@ -22,7 +22,9 @@ globalThis.document = {
   head: { appendChild() {} },
 };
 
-const { App } = await import("../chess-website-uml/public/src/app/App.js");
+const { App, CELEBRATION_SOUNDS } = await import(
+  "../chess-website-uml/public/src/app/App.js"
+);
 
 test("celebrates when puzzle solved without mate", () => {
   const app = Object.create(App.prototype);
@@ -41,18 +43,21 @@ test("celebrates when puzzle solved without mate", () => {
   app.ui = {
     celebrated: false,
     square: undefined,
-    celebrate(sq) {
+    type: undefined,
+    celebrate(sq, t) {
       this.celebrated = true;
       this.square = sq;
+      this.type = t;
     },
   };
 
   App.prototype.maybeCelebrate.call(app);
 
-  assert.equal(app.sounds.played, "airhorn");
+  assert.ok(CELEBRATION_SOUNDS.includes(app.sounds.played));
   assert.equal(app.ui.celebrated, true);
   assert.equal(app.ui.square, undefined);
   assert.equal(app.lastCelebrationPly, 1);
+  assert.ok(app.ui.type >= 0 && app.ui.type < CELEBRATION_SOUNDS.length);
 });
 
 test("resets celebration state when puzzle loads", () => {

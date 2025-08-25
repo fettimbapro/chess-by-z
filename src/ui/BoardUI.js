@@ -115,8 +115,8 @@ const BLACK_GLYPH = {
     svg#arrowSvg g.analysis line.arrow { stroke-width: 6; stroke-linecap: round; opacity: .9; }
     svg#arrowSvg g.analysis polygon.head { opacity: .95; }
 
-    /* Celebration confetti */
-    .confetti-root { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:5; }
+    /* Celebrations */
+    .celebration-root { position:absolute; inset:0; overflow:visible; pointer-events:none; z-index:5; }
     .confetti-piece {
       position:absolute;
       width:12px; height:12px;
@@ -124,8 +124,34 @@ const BLACK_GLYPH = {
       transform: translate(-50%, -50%);
       animation: confetti-explode 1.2s ease-out forwards;
     }
+    .emoji-piece {
+      position:absolute;
+      font-size:24px;
+      transform: translate(-50%, -50%);
+      animation: confetti-explode 1.2s ease-out forwards;
+    }
+    .explosion-piece {
+      position:absolute;
+      width:8px; height:8px;
+      border-radius:50%;
+      background:#ffcf00;
+      transform: translate(-50%, -50%) scale(0);
+      animation: boom-explode .8s ease-out forwards;
+    }
+    .kazoo {
+      position:absolute;
+      font-size:36px;
+      transform: translate(-50%, -50%);
+      animation: kazoo-fly 1s ease-out forwards;
+    }
     @keyframes confetti-explode {
       to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))); opacity:0; }
+    }
+    @keyframes boom-explode {
+      to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(2); opacity:0; }
+    }
+    @keyframes kazoo-fly {
+      to { transform: translate(calc(-50% + 120px), calc(-50% - 40px)) rotate(20deg); opacity:0; }
     }
   `;
   document.head.appendChild(st);
@@ -255,6 +281,111 @@ function findKingSquare(pos, color) {
   }
   return null;
 }
+
+// -------- celebration builders --------
+function confettiBurst(root, origin) {
+  const colors = ["#e74c3c", "#f1c40f", "#2ecc71", "#3498db", "#9b59b6"];
+  for (let i = 0; i < 200; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = `${origin.x}px`;
+    piece.style.top = `${origin.y}px`;
+    piece.style.backgroundColor =
+      colors[Math.floor(Math.random() * colors.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 120 + Math.random() * 160;
+    piece.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    piece.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    piece.style.animationDelay = (Math.random() * 0.2).toFixed(2) + "s";
+    root.appendChild(piece);
+  }
+}
+
+function explosionBurst(root, origin) {
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement("div");
+    piece.className = "explosion-piece";
+    piece.style.left = `${origin.x}px`;
+    piece.style.top = `${origin.y}px`;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 60 + Math.random() * 100;
+    piece.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+    piece.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+    root.appendChild(piece);
+  }
+}
+
+function kazooFly(root, origin) {
+  const piece = document.createElement("div");
+  piece.className = "kazoo";
+  piece.textContent = "🎺";
+  piece.style.left = `${origin.x}px`;
+  piece.style.top = `${origin.y}px`;
+  root.appendChild(piece);
+}
+
+function emojiBurst(root, origin, emojis, count, velocityFn) {
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement("div");
+    piece.className = "emoji-piece";
+    piece.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    piece.style.left = `${origin.x}px`;
+    piece.style.top = `${origin.y}px`;
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 80 + Math.random() * 120;
+    const vel = velocityFn
+      ? velocityFn(angle, distance)
+      : { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance };
+    piece.style.setProperty("--dx", `${vel.dx}px`);
+    piece.style.setProperty("--dy", `${vel.dy}px`);
+    piece.style.animationDelay = (Math.random() * 0.2).toFixed(2) + "s";
+    root.appendChild(piece);
+  }
+}
+
+function starBurst(root, origin) {
+  emojiBurst(root, origin, ["★", "✦", "✧"], 40);
+}
+
+function heartBurst(root, origin) {
+  emojiBurst(root, origin, ["❤", "💖", "💗"], 40);
+}
+
+function pieceBurst(root, origin) {
+  emojiBurst(root, origin, Object.values(BLACK_GLYPH), 30);
+}
+
+function balloonRise(root, origin) {
+  emojiBurst(root, origin, ["🎈"], 20, () => ({
+    dx: (Math.random() - 0.5) * 80,
+    dy: -80 - Math.random() * 80,
+  }));
+}
+
+function sparkleBurst(root, origin) {
+  emojiBurst(root, origin, ["✨"], 40);
+}
+
+function noteBurst(root, origin) {
+  emojiBurst(root, origin, ["🎵", "🎶"], 30);
+}
+
+function smileBurst(root, origin) {
+  emojiBurst(root, origin, ["😆", "😁", "😄"], 30);
+}
+
+const CELEBRATION_BUILDERS = [
+  confettiBurst,
+  explosionBurst,
+  kazooFly,
+  starBurst,
+  heartBurst,
+  pieceBurst,
+  balloonRise,
+  sparkleBurst,
+  noteBurst,
+  smileBurst,
+];
 
 // --------------- BoardUI -----------------
 export class BoardUI {
@@ -989,32 +1120,23 @@ export class BoardUI {
   }
 
   // -------- celebration --------
-  celebrate(square) {
+  celebrate(
+    square,
+    type = Math.floor(Math.random() * CELEBRATION_BUILDERS.length),
+  ) {
     // remove any existing celebration
     this.stopCelebration();
 
     const root = document.createElement("div");
-    root.className = "confetti-root";
+    root.className = "celebration-root";
     this.boardEl.appendChild(root);
 
     const origin = square
       ? this.squareCenterPx(square)
       : { x: this.boardEl.clientWidth / 2, y: this.boardEl.clientHeight / 2 };
-    const colors = ["#e74c3c", "#f1c40f", "#2ecc71", "#3498db", "#9b59b6"];
-    for (let i = 0; i < 200; i++) {
-      const piece = document.createElement("div");
-      piece.className = "confetti-piece";
-      piece.style.left = `${origin.x}px`;
-      piece.style.top = `${origin.y}px`;
-      piece.style.backgroundColor =
-        colors[Math.floor(Math.random() * colors.length)];
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 120 + Math.random() * 160;
-      piece.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
-      piece.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
-      piece.style.animationDelay = (Math.random() * 0.2).toFixed(2) + "s";
-      root.appendChild(piece);
-    }
+
+    const builder = CELEBRATION_BUILDERS[type] || CELEBRATION_BUILDERS[0];
+    builder(root, origin);
 
     this._celebrationRoot = root;
     this._celebrationTimer = setTimeout(() => this.stopCelebration(), 1500);

@@ -25,6 +25,20 @@ export class Sounds {
           gain: 0.12,
           type: "triangle",
         },
+        boom: {
+          filter: 500,
+          osc: 120,
+          dur: 0.4,
+          gain: 0.15,
+          type: "square",
+        },
+        kazoo: {
+          filter: 1000,
+          osc: 220,
+          dur: 0.6,
+          gain: 0.12,
+          type: "sawtooth",
+        },
         fart: {
           filter: 200,
           osc: 80,
