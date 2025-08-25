@@ -12,6 +12,19 @@ import { formatScore, scoreToPct } from "../util/format.js";
 
 const qs = (s) => document.querySelector(s);
 
+export const CELEBRATION_SOUNDS = [
+  "airhorn",
+  "boom",
+  "kazoo",
+  "airhorn",
+  "boom",
+  "airhorn",
+  "kazoo",
+  "airhorn",
+  "kazoo",
+  "airhorn",
+];
+
 export class App {
   constructor() {
     window.app = this;
@@ -914,12 +927,14 @@ export class App {
           }
         }
       } catch {}
-      this.sounds.play("airhorn");
-      this.ui.celebrate?.(kingSq);
+      const idx = Math.floor(Math.random() * CELEBRATION_SOUNDS.length);
+      this.sounds.play(CELEBRATION_SOUNDS[idx]);
+      this.ui.celebrate?.(kingSq, idx);
     } else if (solvedPuzzle && this.lastCelebrationPly !== ply) {
       this.lastCelebrationPly = ply;
-      this.sounds.play("airhorn");
-      this.ui.celebrate?.();
+      const idx = Math.floor(Math.random() * CELEBRATION_SOUNDS.length);
+      this.sounds.play(CELEBRATION_SOUNDS[idx]);
+      this.ui.celebrate?.(undefined, idx);
     }
   }
 }
