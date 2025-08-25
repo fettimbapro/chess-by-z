@@ -51,9 +51,10 @@ const BLACK_GLYPH = {
         var(--glyph-outline-width) calc(var(--glyph-outline-width) * -1) var(--glyph-outline, #000),
         calc(var(--glyph-outline-width) * -1) var(--glyph-outline-width) var(--glyph-outline, #000),
         calc(var(--glyph-outline-width) * -1)
-          calc(var(--glyph-outline-width) * -1)
+        calc(var(--glyph-outline-width) * -1)
           var(--glyph-outline, #000);
       pointer-events: none;
+      -webkit-user-select: none;
       user-select: none;
     }
     /* Make bishops slightly larger to distinguish from pawns */
