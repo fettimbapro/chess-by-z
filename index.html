@@ -440,6 +440,21 @@
         justify-content: center;
       }
 
+      .mode-card .button-row {
+        margin: 0;
+      }
+
+      .mode-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+      }
+
+      .mode-btn .icon {
+        font-size: 1.2em;
+      }
+
       /* Form controls */
       select,
       input[type="text"],
@@ -576,7 +591,30 @@
       </header>
 
       <div class="stack">
-        <!-- BOARD FIRST -->
+        <!-- MODE BUTTONS -->
+        <div class="card mode-card">
+          <div class="row button-row" id="modeButtons">
+            <button class="btn mode-btn" data-mode="play">
+              <span class="icon">♟</span>
+              Play vs Engine
+            </button>
+            <button class="btn mode-btn" data-mode="analysis">
+              <span class="icon">🔍</span>
+              Analysis
+            </button>
+            <button class="btn mode-btn" data-mode="puzzle">
+              <span class="icon">🧩</span>
+              Puzzles
+            </button>
+            <select id="mode" style="display: none">
+              <option value="play">Play vs Engine</option>
+              <option value="analysis">Analysis</option>
+              <option value="puzzle">Puzzles</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- BOARD -->
         <div class="board-area">
           <div class="row" id="puzzleBottom" style="display: none">
             <button id="newPuzzle">New Puzzle</button>
@@ -657,17 +695,6 @@
             <button id="switchSide" class="switch-btn">
               Switch to black and restart
             </button>
-          </div>
-
-          <div class="row button-row" id="modeButtons">
-            <button class="btn" data-mode="play">Play vs Engine</button>
-            <button class="btn" data-mode="analysis">Analysis</button>
-            <button class="btn" data-mode="puzzle">Puzzles</button>
-            <select id="mode" style="display: none">
-              <option value="play">Play vs Engine</option>
-              <option value="analysis">Analysis</option>
-              <option value="puzzle">Puzzles</option>
-            </select>
           </div>
 
           <div class="row">
