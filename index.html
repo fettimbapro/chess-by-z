@@ -582,6 +582,40 @@
       svg .sys-arrows polygon {
         shape-rendering: geometricPrecision;
       }
+
+      .rush-panel {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid #222a36;
+        border-radius: 10px;
+        background: rgba(20, 25, 34, 0.9);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .rush-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .rush-stats .muted {
+        display: inline-block;
+        min-width: 38px;
+      }
+      .rush-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .rush-actions button[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .rush-status {
+        min-height: 18px;
+      }
     </style>
   </head>
   <body>
@@ -680,6 +714,33 @@
               <span class="muted" id="difficultyLabel">Any</span>
             </div>
             <div class="muted" id="puzzleCount"></div>
+            <div class="rush-panel" id="puzzleRush" style="display: none">
+              <div class="rush-stats">
+                <div>
+                  <span class="muted">Time</span>
+                  <span id="puzzleRushTimer">03:00</span>
+                </div>
+                <div>
+                  <span class="muted">Score</span>
+                  <span id="puzzleRushScore">0</span>
+                </div>
+                <div>
+                  <span class="muted">Best</span>
+                  <span id="puzzleRushBest">0</span>
+                </div>
+                <div>
+                  <span class="muted">Lives</span>
+                  <span id="puzzleRushLives">3</span>
+                </div>
+              </div>
+              <div class="rush-actions">
+                <button id="puzzleRushStart">Start Puzzle Rush</button>
+                <button id="puzzleRushStop" disabled>Stop</button>
+              </div>
+              <div class="muted rush-status" id="puzzleRushStatus">
+                Puzzle Rush ready.
+              </div>
+            </div>
           </div>
         </div>
 

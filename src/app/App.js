@@ -137,6 +137,14 @@ export class App {
         puzzleCount: qs("#puzzleCount"),
         puzzlePrompt: qs("#puzzlePrompt"),
         puzzleLoading: qs("#puzzleLoading"),
+        rushPanel: qs("#puzzleRush"),
+        rushTimer: qs("#puzzleRushTimer"),
+        rushScore: qs("#puzzleRushScore"),
+        rushBest: qs("#puzzleRushBest"),
+        rushLives: qs("#puzzleRushLives"),
+        rushStartBtn: qs("#puzzleRushStart"),
+        rushStopBtn: qs("#puzzleRushStop"),
+        rushStatus: qs("#puzzleRushStatus"),
       },
       onStateChanged: () => {
         this.syncBoard();
@@ -243,6 +251,9 @@ export class App {
     this.modeSel.addEventListener("change", async () => {
       const m = this.modeSel.value;
       this.puzzles.show(m === "puzzle");
+      if (m !== "puzzle") {
+        this.puzzles.cancelRush?.();
+      }
       if (m === "play") {
         this.maybeEngineMove();
       } else this.clock.pause();

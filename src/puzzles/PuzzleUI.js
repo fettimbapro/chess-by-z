@@ -94,9 +94,20 @@ export class PuzzleUI {
     this.hintSquare = null;
     this.seenIds = new Set();
 
+    this.rushDuration = 180;
+    this.rushMaxLives = 3;
+    this.rushTimerId = null;
+    this.rushActive = false;
+    this.rushScore = 0;
+    this.rushLives = this.rushMaxLives;
+    this.rushTimeRemaining = this.rushDuration;
+    this.rushHighScore = this.loadRushHighScore();
+
     this.bindDom();
     this.populateOpenings();
     this.populateThemes();
+    this.updateRushDisplay();
+    this.updateRushStatus("Puzzle Rush ready.");
     this.updateFilterCount();
   }
 
@@ -109,12 +120,16 @@ export class PuzzleUI {
       this.dom.clockBlack.style.display = flag ? "none" : "";
     if (this.dom?.clockWhite)
       this.dom.clockWhite.style.display = flag ? "none" : "";
+    if (this.dom?.rushPanel)
+      this.dom.rushPanel.style.display = flag ? "" : "none";
+    if (!flag) this.cancelRush();
   }
   showLoading(flag) {
     if (this.dom?.puzzleLoading)
       this.dom.puzzleLoading.style.display = flag ? "flex" : "none";
   }
   resetProgress() {
+    this.cancelRush();
     this.index = 0;
     this.autoplayFirst = false;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
@@ -159,6 +174,9 @@ export class PuzzleUI {
     const loadFiltered = () => this.loadFilteredRandom();
     on(d.newPuzzleBtn, "click", loadFiltered);
     on(d.hintBtn, "click", () => this.hint());
+
+    on(d.rushStartBtn, "click", () => this.startRush());
+    on(d.rushStopBtn, "click", () => this.stopRush());
 
     on(d.openingSel, "change", () => this.updateFilterCount());
     on(d.themeSel, "change", () => this.updateFilterCount());
@@ -207,6 +225,7 @@ export class PuzzleUI {
   }
 
   async loadFilteredRandom() {
+    if (this.rushActive) return;
     this.showLoading(true);
     try {
       const parseVal = (el) =>
@@ -244,7 +263,7 @@ export class PuzzleUI {
       this.index = 0;
       this.autoplayFirst = !!p.autoplayFirst;
       this.applyCurrent(true);
-      this.updateFilterCount();
+      if (!this.rushActive) this.updateFilterCount();
       if (this.dom?.puzzlePrompt) {
         this.dom.puzzlePrompt.style.display = "none";
         this.dom.puzzlePrompt.innerHTML = "";
@@ -256,6 +275,10 @@ export class PuzzleUI {
 
   async updateFilterCount() {
     if (!this.dom?.puzzleCount) return;
+    if (this.rushActive) {
+      this.dom.puzzleCount.textContent = "";
+      return;
+    }
     try {
       const parseVal = (el) =>
         el && el.value !== "" ? parseInt(el.value, 10) : null;
@@ -334,7 +357,8 @@ export class PuzzleUI {
       if (this.dom?.puzzleStatus)
         this.dom.puzzleStatus.innerHTML = `<span style="color:#39d98a">Correct!</span>`;
       if (this.index >= (this.current?.solutionSan?.length || 0)) {
-        this.promptNewPuzzle();
+        if (this.rushActive) this.handleRushSuccess();
+        else this.promptNewPuzzle();
         return true;
       } else {
         const reply = this.current.solutionSan[this.index];
@@ -345,21 +369,32 @@ export class PuzzleUI {
           this.onStateChanged();
           if (this.dom?.puzzleStatus)
             this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">Your move…</span>`;
+          if (
+            this.rushActive &&
+            this.index >= (this.current?.solutionSan?.length || 0)
+          ) {
+            this.handleRushSuccess();
+          }
           return true;
         } else {
           return true;
         }
       }
     } else {
-      if (this.dom?.puzzleStatus)
-        this.dom.puzzleStatus.innerHTML = `<span style="color:#ff6b6b">Try again.</span>`;
-      window.MoveFlash?.flash({ color: "255,107,107" });
+      if (this.rushActive) {
+        this.handleRushMistake();
+      } else {
+        if (this.dom?.puzzleStatus)
+          this.dom.puzzleStatus.innerHTML = `<span style="color:#ff6b6b">Try again.</span>`;
+        window.MoveFlash?.flash({ color: "255,107,107" });
+      }
       this.game.undo();
       return false;
     }
   }
 
   promptNewPuzzle() {
+    if (this.rushActive) return;
     if (this.dom?.puzzleStatus) this.dom.puzzleStatus.textContent = "";
     if (!this.dom?.puzzlePrompt) return;
     this.dom.puzzlePrompt.innerHTML =
@@ -388,6 +423,229 @@ export class PuzzleUI {
       this.ui.drawArrowUci?.(m.from + m.to + (m.promotion || ""));
       this.hintStage = 2;
     }
+  }
+
+  startRush() {
+    if (this.rushActive) return;
+    this.hidePuzzlePrompt();
+    this.rushScore = 0;
+    this.rushLives = this.rushMaxLives;
+    this.rushTimeRemaining = this.rushDuration;
+    this.rushActive = true;
+    this.seenIds.clear();
+    this.updateRushDisplay();
+    this.updateRushStatus("Puzzle Rush started!");
+    if (this.dom?.rushStartBtn) this.dom.rushStartBtn.disabled = true;
+    if (this.dom?.rushStopBtn) this.dom.rushStopBtn.disabled = false;
+    if (this.dom?.newPuzzleBtn) this.dom.newPuzzleBtn.disabled = true;
+    if (this.dom?.hintBtn) this.dom.hintBtn.disabled = true;
+    if (this.rushTimerId) clearInterval(this.rushTimerId);
+    this.rushTimerId = setInterval(() => {
+      if (!this.rushActive) return;
+      this.rushTimeRemaining = Math.max(0, this.rushTimeRemaining - 1);
+      this.updateRushDisplay();
+      if (this.rushTimeRemaining <= 0) {
+        this.finishRush("time");
+      }
+    }, 1000);
+    this.loadNextRushPuzzle(true);
+  }
+
+  stopRush() {
+    if (!this.rushActive) return;
+    this.finishRush("manual");
+  }
+
+  finishRush(reason) {
+    if (this.rushTimerId) {
+      clearInterval(this.rushTimerId);
+      this.rushTimerId = null;
+    }
+    const wasActive = this.rushActive;
+    this.rushActive = false;
+    if (this.dom?.rushStartBtn) this.dom.rushStartBtn.disabled = false;
+    if (this.dom?.rushStopBtn) this.dom.rushStopBtn.disabled = true;
+    if (this.dom?.newPuzzleBtn) this.dom.newPuzzleBtn.disabled = false;
+    if (this.dom?.hintBtn) this.dom.hintBtn.disabled = false;
+    if (!wasActive && reason !== "error") {
+      this.updateRushStatus("Puzzle Rush ready.");
+      return;
+    }
+    const finalScore = this.rushScore;
+    const isHigh = this.saveRushHighScore(finalScore);
+    this.updateRushDisplay();
+    let msg = "Puzzle Rush finished.";
+    if (reason === "time") msg = "⏱️ Time's up!";
+    else if (reason === "lives") msg = "❌ No lives left.";
+    else if (reason === "manual") msg = "⏹️ Rush stopped.";
+    else if (reason === "empty") msg = "No more puzzles matched the ramp.";
+    else if (reason === "error") msg = "Puzzle Rush ended early.";
+    if (finalScore > 0) msg += ` Final score: ${finalScore}.`;
+    if (isHigh && finalScore > 0) msg += " New high score!";
+    this.updateRushStatus(msg.trim());
+    this.showRushSummary(finalScore, isHigh, reason);
+  }
+
+  cancelRush() {
+    if (this.rushTimerId) {
+      clearInterval(this.rushTimerId);
+      this.rushTimerId = null;
+    }
+    this.rushActive = false;
+    this.rushScore = 0;
+    this.rushLives = this.rushMaxLives;
+    this.rushTimeRemaining = this.rushDuration;
+    if (this.dom?.rushStartBtn) this.dom.rushStartBtn.disabled = false;
+    if (this.dom?.rushStopBtn) this.dom.rushStopBtn.disabled = true;
+    if (this.dom?.newPuzzleBtn) this.dom.newPuzzleBtn.disabled = false;
+    if (this.dom?.hintBtn) this.dom.hintBtn.disabled = false;
+    this.updateRushDisplay();
+    this.updateRushStatus("Puzzle Rush ready.");
+    this.hidePuzzlePrompt();
+  }
+
+  handleRushSuccess() {
+    if (!this.rushActive) return;
+    this.rushScore++;
+    this.updateRushDisplay();
+    if (this.dom?.puzzleStatus)
+      this.dom.puzzleStatus.innerHTML = `<span style="color:#39d98a">Score: ${this.rushScore}</span>`;
+    this.hidePuzzlePrompt();
+    setTimeout(() => {
+      if (this.rushActive) this.loadNextRushPuzzle();
+    }, 400);
+  }
+
+  handleRushMistake() {
+    if (!this.rushActive) return;
+    this.rushLives = Math.max(0, this.rushLives - 1);
+    this.updateRushDisplay();
+    window.MoveFlash?.flash({ color: "255,107,107" });
+    if (this.dom?.puzzleStatus) {
+      const text = this.rushLives
+        ? `Incorrect — ${this.rushLives} lives left`
+        : "Incorrect — no lives left";
+      this.dom.puzzleStatus.innerHTML = `<span style="color:#ff6b6b">${text}</span>`;
+    }
+    if (this.rushLives <= 0) {
+      this.finishRush("lives");
+    } else {
+      setTimeout(() => {
+        if (this.rushActive) this.loadNextRushPuzzle();
+      }, 400);
+    }
+  }
+
+  async loadNextRushPuzzle() {
+    if (!this.rushActive) return;
+    this.showLoading(true);
+    try {
+      const difficulty = this.getRushDifficulty(this.rushScore);
+      const p = await this.svc.randomFiltered({
+        ...difficulty,
+        excludeIds: Array.from(this.seenIds),
+      });
+      if (!p) {
+        this.finishRush("empty");
+        return;
+      }
+      await this.loadConvertedPuzzle({ ...p, autoplayFirst: false });
+      if (this.dom?.puzzleStatus)
+        this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">Your move…</span>`;
+    } catch (e) {
+      this.updateRushStatus("Failed to load puzzle.");
+      this.finishRush("error");
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  getRushDifficulty(score) {
+    const base = 400 + score * 75;
+    const min = Math.max(0, Math.min(3300, base));
+    const max = Math.max(min + 50, Math.min(3500, base + 250));
+    return { difficultyMin: min, difficultyMax: max };
+  }
+
+  updateRushDisplay() {
+    if (this.dom?.rushTimer)
+      this.dom.rushTimer.textContent = this.formatRushTime(
+        this.rushTimeRemaining,
+      );
+    if (this.dom?.rushScore)
+      this.dom.rushScore.textContent = String(this.rushScore);
+    if (this.dom?.rushBest)
+      this.dom.rushBest.textContent = String(Math.max(this.rushHighScore, 0));
+    if (this.dom?.rushLives)
+      this.dom.rushLives.textContent = String(this.rushLives);
+  }
+
+  updateRushStatus(text) {
+    if (this.dom?.rushStatus) this.dom.rushStatus.textContent = text;
+  }
+
+  saveRushHighScore(score) {
+    if (score <= this.rushHighScore) return false;
+    this.rushHighScore = score;
+    try {
+      globalThis?.localStorage?.setItem("puzzleRushHighScore", String(score));
+    } catch {}
+    this.updateRushDisplay();
+    return true;
+  }
+
+  loadRushHighScore() {
+    try {
+      const raw = globalThis?.localStorage?.getItem("puzzleRushHighScore");
+      const val = parseInt(raw, 10);
+      return Number.isFinite(val) ? val : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  showRushSummary(score, isHighScore, reason) {
+    if (!this.dom?.puzzlePrompt) return;
+    this.dom.puzzlePrompt.style.display = "flex";
+    const reasonText =
+      reason === "time"
+        ? "Time's up!"
+        : reason === "lives"
+          ? "No lives left."
+          : reason === "manual"
+            ? "Rush stopped."
+            : reason === "empty"
+              ? "Out of puzzles."
+              : "Rush finished.";
+    const high = isHighScore ? '<div class="muted">New high score!</div>' : "";
+    this.dom.puzzlePrompt.innerHTML = `
+      <div class="box">
+        <div><strong>Puzzle Rush</strong> — ${reasonText}</div>
+        <div>Score: ${score}</div>
+        <div>Best: ${this.rushHighScore}</div>
+        ${high}
+        <button id="rushPlayAgain">Play again</button>
+      </div>
+    `;
+    const btn = this.dom.puzzlePrompt.querySelector("#rushPlayAgain");
+    on(btn, "click", () => {
+      this.hidePuzzlePrompt();
+      this.startRush();
+    });
+  }
+
+  hidePuzzlePrompt() {
+    if (this.dom?.puzzlePrompt) {
+      this.dom.puzzlePrompt.style.display = "none";
+      this.dom.puzzlePrompt.innerHTML = "";
+    }
+  }
+
+  formatRushTime(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${String(m).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
   }
 }
 
