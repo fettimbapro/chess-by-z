@@ -37,12 +37,13 @@ test("loadConvertedPuzzle flips orientation", async () => {
     },
   });
 
+  const fen = "8/8/8/8/8/8/8/k6K b - - 0 1";
   await puzzles.loadConvertedPuzzle({
-    puzzle: { id: "p1", fen: "8/8/8/8/8/8/8/k6K b - - 0 1", moves: "a1b1" },
-    autoplayFirst: true,
+    puzzle: { id: "p1", fen, moves: "a1b1" },
   });
-  assert.equal(app.sideSel.value, "white");
-  assert.equal(oriented, "white");
+  const expected = fen.split(" ")[1] === "w" ? "white" : "black";
+  assert.equal(app.sideSel.value, expected);
+  assert.equal(oriented, expected);
   assert.equal(app.gameOver, false);
 });
 
@@ -71,8 +72,8 @@ test("puzzle rush orients board for the player", async () => {
         return {
           puzzle: {
             id: "rush1",
-            fen: "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
-            moves: "d7d5 e4d5",
+            fen: "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2",
+            moves: "g2g3 d7d5",
           },
         };
       },
@@ -89,6 +90,9 @@ test("puzzle rush orients board for the player", async () => {
   puzzles.rushActive = true;
   await puzzles.loadNextRushPuzzle();
 
-  assert.equal(app.sideSel.value, "white");
-  assert.equal(oriented, "white");
+  const rushFen =
+    "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 2";
+  const rushExpected = rushFen.split(" ")[1] === "w" ? "white" : "black";
+  assert.equal(app.sideSel.value, rushExpected);
+  assert.equal(oriented, rushExpected);
 });

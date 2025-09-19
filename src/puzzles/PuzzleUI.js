@@ -247,7 +247,7 @@ export class PuzzleUI {
         alert("No puzzle matches your filter.");
         return;
       }
-      await this.loadConvertedPuzzle({ ...p, autoplayFirst: true });
+      await this.loadConvertedPuzzle(p);
     } catch (e) {
       alert("Failed to load puzzle: " + e.message);
     } finally {
@@ -549,7 +549,7 @@ export class PuzzleUI {
         this.finishRush("empty");
         return;
       }
-      await this.loadConvertedPuzzle({ ...p, autoplayFirst: true });
+      await this.loadConvertedPuzzle(p);
       if (this.dom?.puzzleStatus)
         this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">Your move…</span>`;
     } catch (e) {
