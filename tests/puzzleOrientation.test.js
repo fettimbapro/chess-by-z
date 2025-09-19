@@ -45,3 +45,50 @@ test("loadConvertedPuzzle flips orientation", async () => {
   assert.equal(oriented, "white");
   assert.equal(app.gameOver, false);
 });
+
+test("puzzle rush orients board for the player", async () => {
+  const game = new Game();
+  let oriented = null;
+  const app = {
+    sideSel: { value: "white" },
+    applyOrientation() {
+      ui.setOrientation(this.sideSel.value);
+    },
+  };
+  const ui = {
+    clearArrow() {},
+    resizeOverlay() {},
+    drawArrowUci() {},
+    setOrientation(side) {
+      oriented = side;
+    },
+  };
+  const puzzles = new PuzzleUI({
+    game,
+    ui,
+    service: {
+      async randomFiltered() {
+        return {
+          puzzle: {
+            id: "rush1",
+            fen: "r1bqkbnr/pppppppp/2n5/8/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
+            moves: "d7d5 e4d5",
+          },
+        };
+      },
+    },
+    dom: {},
+    onStateChanged: () => {},
+    onMove: () => {},
+    onPuzzleLoad: (turn) => {
+      app.sideSel.value = turn === "w" ? "white" : "black";
+      app.applyOrientation();
+    },
+  });
+
+  puzzles.rushActive = true;
+  await puzzles.loadNextRushPuzzle();
+
+  assert.equal(app.sideSel.value, "white");
+  assert.equal(oriented, "white");
+});

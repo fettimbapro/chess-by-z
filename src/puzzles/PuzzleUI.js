@@ -549,7 +549,7 @@ export class PuzzleUI {
         this.finishRush("empty");
         return;
       }
-      await this.loadConvertedPuzzle({ ...p, autoplayFirst: false });
+      await this.loadConvertedPuzzle({ ...p, autoplayFirst: true });
       if (this.dom?.puzzleStatus)
         this.dom.puzzleStatus.innerHTML = `<span style="color:#8aa0b6">Your move…</span>`;
     } catch (e) {
